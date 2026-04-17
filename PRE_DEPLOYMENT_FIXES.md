@@ -42,6 +42,25 @@ const adminRoutes = require('../routes/adminRoutes');
 
 // Added route registration
 app.use('/api/admin', adminRoutes);
+
+// Added root endpoint with API overview
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "KM Cart API is running 🚀",
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      products: "/api/products",
+      orders: "/api/orders",
+      payment: "/api/payment",
+      chatbot: "/api/chatbot",
+      admin: "/api/admin"
+    }
+  });
+});
 ```
 
 **Admin Endpoints Now Available:**
@@ -195,6 +214,12 @@ git status --short
 # Start server
 cd server
 npm start
+
+# Test root endpoint
+curl http://localhost:5000/
+
+# Test API health
+curl http://localhost:5000/api
 
 # Test admin endpoint (requires auth token)
 curl -H "Authorization: Bearer YOUR_TOKEN" \

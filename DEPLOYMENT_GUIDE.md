@@ -78,7 +78,28 @@ NODE_ENV=production
 - Copy the deployment URL (e.g., `https://your-backend.vercel.app`)
 
 #### F. Test Backend
-Visit: `https://your-backend.vercel.app/api`
+Visit: `https://your-backend.vercel.app/`
+
+Expected response:
+```json
+{
+  "success": true,
+  "message": "KM Cart API is running 🚀",
+  "version": "1.0.0",
+  "timestamp": "2026-04-17T...",
+  "endpoints": {
+    "health": "/api/health",
+    "auth": "/api/auth",
+    "products": "/api/products",
+    "orders": "/api/orders",
+    "payment": "/api/payment",
+    "chatbot": "/api/chatbot",
+    "admin": "/api/admin"
+  }
+}
+```
+
+Also test: `https://your-backend.vercel.app/api`
 
 Expected response:
 ```json
@@ -170,6 +191,9 @@ service firebase.storage {
 
 ### Backend Tests
 ```bash
+# Root endpoint - API overview
+curl https://your-backend.vercel.app/
+
 # Health check
 curl https://your-backend.vercel.app/api
 

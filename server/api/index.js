@@ -103,6 +103,28 @@ const connectDB = async () => {
 // ─────────────────────────────────────────────────────────────────────
 
 /**
+ * Root endpoint — API overview with available endpoints.
+ * Visit: https://your-server.vercel.app/
+ */
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "KM Cart API is running 🚀",
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      products: "/api/products",
+      orders: "/api/orders",
+      payment: "/api/payment",
+      chatbot: "/api/chatbot",
+      admin: "/api/admin"
+    }
+  });
+});
+
+/**
  * Root health check — works even if DB is down.
  * Visit: https://your-server.vercel.app/api
  */
@@ -186,8 +208,8 @@ app.use((err, req, res, next) => {
 
 module.exports = async (req, res) => {
   try {
-    // Skip DB connection for basic health check (GET /api)
-    if (req.url === '/api' && req.method === 'GET') {
+    // Skip DB connection for basic health checks and root endpoint
+    if ((req.url === '/api' || req.url === '/') && req.method === 'GET') {
       return app(req, res);
     }
 
