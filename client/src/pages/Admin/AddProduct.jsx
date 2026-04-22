@@ -1,6 +1,7 @@
 /**
  * @file client/src/pages/Admin/AddProduct.jsx
  * @description Page for adding a new product via the admin dashboard.
+ * Theme: Cream/Peach (#FBE8CE) + Orange (#F96D00)
  */
 
 import { useState } from 'react';
@@ -35,13 +36,13 @@ function AddProduct() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/admin/products')}
-          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+          className="p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-[#E8C99A] transition-colors"
         >
           <HiOutlineArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h2 className="text-white text-2xl font-bold">Add Product</h2>
-          <p className="text-slate-500 text-sm">Create a new product listing</p>
+          <h2 className="text-gray-900 text-2xl font-bold">Add Product</h2>
+          <p className="text-gray-500 text-sm">Create a new product listing</p>
         </div>
       </div>
 

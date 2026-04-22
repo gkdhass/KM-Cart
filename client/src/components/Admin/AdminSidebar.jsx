@@ -15,11 +15,13 @@ import {
   HiOutlinePlusCircle,
   HiOutlineArrowLeftOnRectangle,
   HiOutlineXMark,
+  HiOutlineTag,
 } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: HiOutlineChartPie },
+  { to: '/admin/categories', label: 'Categories', icon: HiOutlineTag },
   { to: '/admin/products', label: 'Products', icon: HiOutlineCube },
   { to: '/admin/products/add', label: 'Add Product', icon: HiOutlinePlusCircle },
   { to: '/admin/orders', label: 'Orders', icon: HiOutlineShoppingCart },

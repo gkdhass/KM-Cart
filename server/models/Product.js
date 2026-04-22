@@ -6,27 +6,6 @@
 
 const mongoose = require('mongoose');
 
-/** Valid grocery product categories */
-const PRODUCT_CATEGORIES = [
-  'Oil',
-  'Masala',
-  'Rice & Grains',
-  'Pulses & Dal',
-  'Spices',
-  'Sugar & Sweeteners',
-  'Beverages',
-  'Household & Cleaning',
-  'Packaged & Ready',
-  'Dairy',
-  'Snacks',
-  'Biscuits & Cookies',
-  'Chocolates',
-  'Juices & Drinks',
-  'Dry Fruits & Nuts',
-  'Pickles & Sauces',
-  'Personal Care',
-];
-
 /** Valid unit types for grocery products */
 const UNIT_OPTIONS = ['Kg', 'Liter', 'Pack', 'Piece'];
 
@@ -125,10 +104,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, 'Product category is required'],
-      enum: {
-        values: PRODUCT_CATEGORIES,
-        message: `Category must be one of: ${PRODUCT_CATEGORIES.join(', ')}`,
-      },
+      trim: true,
     },
     image: {
       type: String,

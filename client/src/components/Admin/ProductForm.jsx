@@ -8,21 +8,7 @@
 import { useState, useEffect } from 'react';
 import ImageUploader from './ImageUploader';
 import { HiOutlineTag, HiOutlineXMark } from 'react-icons/hi2';
-
-const CATEGORIES = [
-  { value: 'mobile', label: 'Mobile' },
-  { value: 'laptop', label: 'Laptop' },
-  { value: 'tablet', label: 'Tablet' },
-  { value: 'accessories', label: 'Accessories' },
-  { value: 'men-shirts', label: 'Men Shirts' },
-  { value: 'men-pants', label: 'Men Pants' },
-  { value: 'kids-dress', label: 'Kids Dress' },
-  { value: 'girls-dress', label: 'Girls Dress' },
-  { value: 'watches', label: 'Watches' },
-  { value: 'bluetooth-speakers', label: 'Bluetooth Speakers' },
-  { value: 'wired-headphones', label: 'Wired Headphones' },
-  { value: 'electronics', label: 'Electronics' },
-];
+import api from '../../utils/api';
 
 const GENDERS = [
   { value: 'all', label: 'All' },
@@ -55,6 +41,34 @@ function ProductForm({ initialData = null, onSubmit, loading = false, submitLabe
   const [images, setImages] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [errors, setErrors] = useState({});
+  const [categories, setCategories] = useState([]);
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/categories');
+        if (res.data.success) {
+          setCategories(res.data.categories.map((cat) => ({
+            value: cat.name,
+            label: cat.name,
+          })));
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        // Fallback categories if API fails
+        setCategories([
+          { value: 'Oil', label: 'Oil' },
+          { value: 'Masala', label: 'Masala' },
+          { value: 'Rice & Grains', label: 'Rice & Grains' },
+          { value: 'Spices', label: 'Spices' },
+          { value: 'Dairy', label: 'Dairy' },
+          { value: 'Snacks', label: 'Snacks' },
+        ]);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Pre-fill for edit mode
   useEffect(() => {
@@ -162,28 +176,28 @@ function ProductForm({ initialData = null, onSubmit, loading = false, submitLabe
           <div className="md:col-span-2">
             <label className="block text-gray-600 text-sm font-medium mb-2">Product Name *</label>
             <input type="text" name="name" value={formData.name} onChange={handleChange}
-              placeholder="e.g., iPhone 15 Pro Max" className={inputClass('name')} />
+              placeholder="e.g., Tata Sampann Turmeric Powder 500g" className={inputClass('name')} />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div className="md:col-span-2">
             <label className="block text-gray-600 text-sm font-medium mb-2">Description</label>
             <textarea name="description" value={formData.description} onChange={handleChange}
-              placeholder="Detailed product description..." rows={4}
+              placeholder="Describe the product — ingredients, weight, usage..." rows={4}
               className={`${inputClass('description')} resize-none`} />
           </div>
 
           <div>
             <label className="block text-gray-600 text-sm font-medium mb-2">Price (₹) *</label>
             <input type="number" name="price" value={formData.price} onChange={handleChange}
-              placeholder="999" min="0" step="0.01" className={inputClass('price')} />
+              placeholder="199" min="0" step="0.01" className={inputClass('price')} />
             {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
           </div>
 
           <div>
             <label className="block text-gray-600 text-sm font-medium mb-2">Original Price (₹)</label>
             <input type="number" name="originalPrice" value={formData.originalPrice} onChange={handleChange}
-              placeholder="1499" min="0" step="0.01" className={inputClass('originalPrice')} />
+              placeholder="299" min="0" step="0.01" className={inputClass('originalPrice')} />
           </div>
 
           <div>
@@ -203,7 +217,7 @@ function ProductForm({ initialData = null, onSubmit, loading = false, submitLabe
             <label className="block text-gray-600 text-sm font-medium mb-2">Category *</label>
             <select name="category" value={formData.category} onChange={handleChange} className={inputClass('category')}>
               <option value="">Select Category</option>
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
@@ -213,7 +227,7 @@ function ProductForm({ initialData = null, onSubmit, loading = false, submitLabe
           <div>
             <label className="block text-gray-600 text-sm font-medium mb-2">Brand</label>
             <input type="text" name="brand" value={formData.brand} onChange={handleChange}
-              placeholder="e.g., Apple" className={inputClass('brand')} />
+              placeholder="e.g., Aashirvaad, Fortune, Tata" className={inputClass('brand')} />
           </div>
 
           <div>

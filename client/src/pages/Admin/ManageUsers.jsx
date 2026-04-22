@@ -100,7 +100,7 @@ function ManageUsers() {
       header: 'User',
       render: (row) => (
         <div className="flex items-center gap-3 min-w-[180px]">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-admin-accent/40 to-orange-600/40 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#F96D00]/40 to-orange-600/40 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
             {row.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div className="min-w-0">
@@ -114,7 +114,7 @@ function ManageUsers() {
       header: 'Role',
       render: (row) => (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-          row.role === 'admin' ? 'bg-admin-accent/15 text-admin-accent' : 'bg-blue-500/10 text-blue-600'
+          row.role === 'admin' ? 'bg-[#F96D00]/15 text-[#F96D00]' : 'bg-blue-500/10 text-blue-600'
         }`}>
           <HiOutlineShieldCheck className="w-3.5 h-3.5" />
           {row.role === 'admin' ? 'Admin' : 'User'}
@@ -153,7 +153,7 @@ function ManageUsers() {
           {row.role !== 'admin' ? (
             <button
               onClick={() => handleRoleChange(row._id, 'admin')}
-              className="p-2 rounded-lg text-admin-accent hover:bg-admin-accent/10 transition-colors"
+              className="p-2 rounded-lg text-[#F96D00] hover:bg-[#F96D00]/10 transition-colors"
               title="Make Admin"
             >
               <HiOutlineShieldCheck className="w-4 h-4" />
@@ -161,7 +161,7 @@ function ManageUsers() {
           ) : (
             <button
               onClick={() => handleRoleChange(row._id, 'user')}
-              className="p-2 rounded-lg text-slate-400 hover:bg-white/5 transition-colors"
+              className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
               title="Remove Admin"
             >
               <HiOutlineShieldCheck className="w-4 h-4" />
@@ -204,7 +204,7 @@ function ManageUsers() {
       </div>
 
       {/* Search */}
-      <div className="flex items-center bg-admin-card/80 rounded-xl px-4 border border-white/5 focus-within:border-admin-accent/30 transition-colors max-w-md">
+      <div className="flex items-center bg-white rounded-xl px-4 border border-[#E8C99A] focus-within:border-[#F96D00] transition-colors max-w-md">
         <HiOutlineMagnifyingGlass className="w-4 h-4 text-gray-500" />
         <input
           type="text"
@@ -230,14 +230,14 @@ function ManageUsers() {
       {/* User Orders Modal */}
       {userOrders && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setUserOrders(null)}>
-          <div className="bg-admin-card border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white border border-[#E8C99A] rounded-2xl p-6 max-w-lg w-full max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-black font-semibold text-lg mb-4">User Orders ({userOrders.orders.length})</h3>
             {userOrders.orders.length > 0 ? (
               <div className="space-y-3">
                 {userOrders.orders.map((order) => (
-                  <div key={order._id} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                  <div key={order._id} className="p-4 rounded-xl bg-[#FBE8CE]/30 border border-[#E8C99A]/50">
                     <div className="flex justify-between items-center">
-                      <span className="text-admin-accent text-sm font-mono">{order.orderId}</span>
+                      <span className="text-[#F96D00] text-sm font-mono">{order.orderId}</span>
                       <span className="text-black font-semibold text-sm">₹{order.totalAmount?.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
@@ -256,7 +256,7 @@ function ManageUsers() {
             )}
             <button
               onClick={() => setUserOrders(null)}
-              className="w-full mt-4 px-4 py-2.5 rounded-xl bg-white/5 text-black hover:text-black text-sm font-medium transition-colors"
+              className="w-full mt-4 px-4 py-2.5 rounded-xl bg-[#FBE8CE] text-gray-700 hover:bg-[#E8C99A] text-sm font-medium transition-colors"
             >
               Close
             </button>

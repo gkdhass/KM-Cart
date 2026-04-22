@@ -24,6 +24,10 @@ const {
   deleteUser,
   getUserOrders,
   getAnalyticsData,
+  getAdminCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
 } = require('../controllers/adminController');
 
 // Apply auth + admin middleware to ALL routes in this router
@@ -32,6 +36,12 @@ router.use(protect, adminOnly);
 /* ── Dashboard ─────────────────────────────────────────────────────── */
 router.get('/stats', getDashboardStats);
 router.get('/charts/piedata', getChartPieData);
+
+/* ── Categories ────────────────────────────────────────────────────── */
+router.get('/categories', getAdminCategories);
+router.post('/categories', createCategory);
+router.put('/categories/:id', updateCategory);
+router.delete('/categories/:id', deleteCategory);
 
 /* ── Products ──────────────────────────────────────────────────────── */
 router.get('/products', getAllProducts);

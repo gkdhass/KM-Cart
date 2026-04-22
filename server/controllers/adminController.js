@@ -7,25 +7,12 @@
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const Category = require('../models/Category');
 
 /* ═══════════════════════════════════════════════════════════════════════
    CATEGORY MAPPING for Pie Charts
-   Maps existing product categories to display groups
+   Grocery categories use their raw names directly.
    ═══════════════════════════════════════════════════════════════════════ */
-const CATEGORY_GROUP_MAP = {
-  'electronics': 'Electronics',
-  'mobile': 'Electronics',
-  'laptop': 'Electronics',
-  'tablet': 'Electronics',
-  'bluetooth-speakers': 'Electronics',
-  'wired-headphones': 'Electronics',
-  'men-shirts': 'Fashion',
-  'men-pants': 'Fashion',
-  'kids-dress': 'Fashion',
-  'girls-dress': 'Fashion',
-  'watches': 'Accessories',
-  'accessories': 'Accessories',
-};
 
 /* ═══════════════════════════════════════════════════════════════════════
    DASHBOARD STATS
@@ -101,16 +88,10 @@ const getChartPieData = async (req, res) => {
       ]),
     ]);
 
-    // Map raw categories to grouped display names
-    const categoryGrouped = {};
-    productsByCategory.forEach((item) => {
-      const displayName = CATEGORY_GROUP_MAP[item._id] || 'Other';
-      categoryGrouped[displayName] = (categoryGrouped[displayName] || 0) + item.count;
-    });
-
-    const productData = Object.entries(categoryGrouped).map(([name, value]) => ({
-      name,
-      value,
+    // Use raw category names directly (grocery categories are already display-friendly)
+    const productData = productsByCategory.map((item) => ({
+      name: item._id || 'Other',
+      value: item.count,
     }));
 
     const orderData = ordersByStatus.map((item) => ({
@@ -751,7 +732,7 @@ const getAnalyticsData = async (req, res) => {
     }));
 
     const categoryData = salesByCategory.map((d) => ({
-      name: CATEGORY_GROUP_MAP[d._id] || d._id || 'Other',
+      name: d._id || 'Other',
       revenue: d.revenue,
       count: d.count,
     }));
@@ -772,6 +753,174 @@ const getAnalyticsData = async (req, res) => {
   }
 };
 
+/* ═══════════════════════════════════════════════════════════════════════
+   CATEGORY MANAGEMENT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * @route   GET /api/admin/categories
+ * @desc    Get all categories (including inactive) for admin management
+ * @access  Admin
+ */
+const getAdminCategories = async (req, res) => {
+  try {
+    const categories = await Category.find()
+      .sort({ order: 1, name: 1 })
+      .lean();
+
+    // For each category, get product count
+    const categoriesWithCount = await Promise.all(
+      categories.map(async (cat) => {
+        const productCount = await Product.countDocuments({ category: cat.name });
+        return { ...cat, productCount };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      categories: categoriesWithCount,
+    });
+  } catch (error) {
+    console.error('[getAdminCategories] Error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch categories.' });
+  }
+};
+
+/**
+ * @route   POST /api/admin/categories
+ * @desc    Create a new category
+ * @access  Admin
+ */
+const createCategory = async (req, res) => {
+  try {
+    const { name, description, image, isActive, order } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category name is required.',
+      });
+    }
+
+    // Check for duplicate
+    const existing = await Category.findOne({ name: name.trim() });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: `Category "${name.trim()}" already exists.`,
+      });
+    }
+
+    const category = await Category.create({
+      name: name.trim(),
+      description: description?.trim() || '',
+      image: image || '',
+      isActive: isActive !== false,
+      order: Number(order) || 0,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Category "${category.name}" created successfully!`,
+      data: category,
+    });
+  } catch (error) {
+    console.error('[createCategory] Error:', error.message);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Category name already exists.' });
+    }
+    res.status(500).json({ success: false, message: 'Failed to create category.' });
+  }
+};
+
+/**
+ * @route   PUT /api/admin/categories/:id
+ * @desc    Update a category
+ * @access  Admin
+ */
+const updateCategory = async (req, res) => {
+  try {
+    const { name, description, image, isActive, order } = req.body;
+
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found.' });
+    }
+
+    const oldName = category.name;
+
+    // Check duplicate if name changed
+    if (name && name.trim() !== oldName) {
+      const existing = await Category.findOne({ name: name.trim(), _id: { $ne: req.params.id } });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: `Category "${name.trim()}" already exists.`,
+        });
+      }
+    }
+
+    // Update fields
+    if (name !== undefined) category.name = name.trim();
+    if (description !== undefined) category.description = description.trim();
+    if (image !== undefined) category.image = image;
+    if (isActive !== undefined) category.isActive = isActive;
+    if (order !== undefined) category.order = Number(order);
+
+    await category.save();
+
+    // If name changed, update all products with the old category name
+    if (name && name.trim() !== oldName) {
+      await Product.updateMany(
+        { category: oldName },
+        { category: category.name }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Category "${category.name}" updated successfully!`,
+      data: category,
+    });
+  } catch (error) {
+    console.error('[updateCategory] Error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to update category.' });
+  }
+};
+
+/**
+ * @route   DELETE /api/admin/categories/:id
+ * @desc    Delete a category (only if no products use it)
+ * @access  Admin
+ */
+const deleteCategory = async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found.' });
+    }
+
+    // Check if any products use this category
+    const productCount = await Product.countDocuments({ category: category.name });
+    if (productCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete "${category.name}" — ${productCount} product(s) still use this category. Move or delete them first.`,
+      });
+    }
+
+    await Category.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: `Category "${category.name}" deleted successfully.`,
+    });
+  } catch (error) {
+    console.error('[deleteCategory] Error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to delete category.' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getChartPieData,
@@ -787,4 +936,8 @@ module.exports = {
   deleteUser,
   getUserOrders,
   getAnalyticsData,
+  getAdminCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
 };

@@ -33,6 +33,7 @@ import AdminRoute from './components/Admin/AdminRoute';
 import AdminLayout from './components/Admin/AdminLayout';
 import Dashboard from './pages/Admin/Dashboard';
 import ManageProducts from './pages/Admin/ManageProducts';
+import ManageCategories from './pages/Admin/ManageCategories';
 import AddProduct from './pages/Admin/AddProduct';
 import EditProduct from './pages/Admin/EditProduct';
 import ManageOrders from './pages/Admin/ManageOrders';
@@ -195,6 +196,7 @@ function AppContent() {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="categories" element={<ManageCategories />} />
             <Route path="products" element={<ManageProducts />} />
             <Route path="products/add" element={<AddProduct />} />
             <Route path="products/edit/:id" element={<EditProduct />} />

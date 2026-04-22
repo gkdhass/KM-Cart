@@ -23,6 +23,7 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 
 // ─────────────────────────────────────────────────────────────────────
 // APP INITIALIZATION
@@ -35,12 +36,25 @@ const PORT = process.env.PORT || 5000;
 // MIDDLEWARE
 // ─────────────────────────────────────────────────────────────────────
 
-/** Enable CORS for all origins (dev-friendly; lock down in production) */
+/** Enable CORS — production: restrict to CLIENT_URL origins, dev: allow all */
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((url) => url.trim())
+  : [];
+
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? process.env.CLIENT_URL
+    ? function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+      }
     : '*',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 /** Parse incoming JSON request bodies (limit to 10mb) */
@@ -87,7 +101,10 @@ app.use('/api/orders', orderRoutes);
 /** Payment routes (Razorpay create-order, verify) */
 app.use('/api/payment', paymentRoutes);
 
-/** Admin routes (dashboard, products, orders, users, analytics) */
+/** Category routes (public — product filters) */
+app.use('/api/categories', categoryRoutes);
+
+/** Admin routes (dashboard, products, orders, users, categories, analytics) */
 app.use('/api/admin', adminRoutes);
 
 // ─────────────────────────────────────────────────────────────────────
@@ -125,6 +142,9 @@ const startServer = async () => {
     // Connect to MongoDB first
     await connectDB();
 
+    // Seed default categories if none exist
+    await seedDefaultCategories();
+
     // Start Express server
     app.listen(PORT, () => {
       console.log('\n═══════════════════════════════════════════════');
@@ -141,5 +161,42 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+/**
+ * Seed default grocery categories if the Category collection is empty.
+ * Runs once on first server start.
+ */
+async function seedDefaultCategories() {
+  try {
+    const Category = require('./models/Category');
+    const count = await Category.countDocuments();
+    if (count > 0) return; // Already seeded
+
+    const defaultCategories = [
+      { name: 'Oil', description: 'Cooking oils and ghee', order: 1 },
+      { name: 'Masala', description: 'Ground spice mixes and masala powders', order: 2 },
+      { name: 'Rice & Grains', description: 'Rice, wheat, millets and grains', order: 3 },
+      { name: 'Pulses & Dal', description: 'Lentils, chickpeas and dals', order: 4 },
+      { name: 'Spices', description: 'Whole spices and seasonings', order: 5 },
+      { name: 'Sugar & Sweeteners', description: 'Sugar, jaggery and sweeteners', order: 6 },
+      { name: 'Beverages', description: 'Tea, coffee and drink mixes', order: 7 },
+      { name: 'Household & Cleaning', description: 'Cleaning supplies and household items', order: 8 },
+      { name: 'Packaged & Ready', description: 'Ready-to-eat and packaged foods', order: 9 },
+      { name: 'Dairy', description: 'Milk, curd, paneer and dairy products', order: 10 },
+      { name: 'Snacks', description: 'Chips, namkeen and snack items', order: 11 },
+      { name: 'Biscuits & Cookies', description: 'Biscuits, cookies and crackers', order: 12 },
+      { name: 'Chocolates', description: 'Chocolates and confectionery', order: 13 },
+      { name: 'Juices & Drinks', description: 'Fruit juices and soft drinks', order: 14 },
+      { name: 'Dry Fruits & Nuts', description: 'Almonds, cashews, raisins and nuts', order: 15 },
+      { name: 'Pickles & Sauces', description: 'Pickles, sauces, jams and condiments', order: 16 },
+      { name: 'Personal Care', description: 'Soaps, shampoo and personal hygiene', order: 17 },
+    ];
+
+    await Category.insertMany(defaultCategories);
+    console.log(`  📦 Seeded ${defaultCategories.length} default categories`);
+  } catch (error) {
+    console.error('⚠️  Category seeding failed (non-fatal):', error.message);
+  }
+}
 
 startServer();

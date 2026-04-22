@@ -1,354 +1,184 @@
-# K_M_Cart Deployment Guide
+# K_M_Cart — Deployment Guide
 
-## 🚀 Pre-Deployment Checklist
+## Architecture
 
-### ✅ Security Issues Fixed
-
-#### Issue 1: Environment Variables Protected
-- ✅ `.gitignore` properly configured to exclude all `.env` files
-- ✅ `server/.env.example` created with placeholder values
-- ✅ `client/.env.example` created with placeholder values
-- ⚠️ **NEVER commit actual `.env` files to GitHub**
-
-#### Issue 2: Admin Routes Added to Serverless Handler
-- ✅ `adminRoutes` imported in `server/api/index.js`
-- ✅ Admin routes registered at `/api/admin`
-- ✅ All admin endpoints now accessible in production
-
-#### Issue 3: node_modules Excluded
-- ✅ `node_modules/` in `.gitignore`
-- ✅ Vercel installs dependencies fresh on each deployment
-- ✅ No need to include `node_modules/` in repository
-
----
-
-## 📋 Deployment Steps
-
-### 1. Backend Deployment (Vercel)
-
-#### A. Push to GitHub
-```bash
-# Make sure .env files are NOT tracked
-git status
-
-# Add and commit changes
-git add .
-git commit -m "Prepare for deployment"
-git push origin main
 ```
-
-#### B. Deploy to Vercel
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. Click **"Add New Project"**
-3. Import your GitHub repository
-4. Configure project:
-   - **Framework Preset:** Other
-   - **Root Directory:** `server`
-   - **Build Command:** (leave empty)
-   - **Output Directory:** (leave empty)
-
-#### C. Set Environment Variables
-In Vercel Dashboard → Project Settings → Environment Variables, add:
-
-```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
-JWT_SECRET=your_64_character_random_string
-CLIENT_URL=https://your-frontend.vercel.app
-RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=your_razorpay_secret
-NODE_ENV=production
-```
-
-**Important Notes:**
-- Use `mongodb+srv://` (Atlas) not `localhost`
-- MongoDB password should NOT contain special characters (@, #, %, etc.)
-- `CLIENT_URL` should NOT have trailing slash
-- Use `rzp_live_` keys for production (not `rzp_test_`)
-
-#### D. Configure MongoDB Atlas
-1. Go to [MongoDB Atlas](https://cloud.mongodb.com/)
-2. Navigate to **Network Access**
-3. Click **"Add IP Address"**
-4. Add `0.0.0.0/0` to allow all IPs (required for Vercel)
-5. Click **"Confirm"**
-
-#### E. Deploy
-- Click **"Deploy"**
-- Wait for deployment to complete
-- Copy the deployment URL (e.g., `https://your-backend.vercel.app`)
-
-#### F. Test Backend
-Visit: `https://your-backend.vercel.app/`
-
-Expected response:
-```json
-{
-  "success": true,
-  "message": "KM Cart API is running 🚀",
-  "version": "1.0.0",
-  "timestamp": "2026-04-17T...",
-  "endpoints": {
-    "health": "/api/health",
-    "auth": "/api/auth",
-    "products": "/api/products",
-    "orders": "/api/orders",
-    "payment": "/api/payment",
-    "chatbot": "/api/chatbot",
-    "admin": "/api/admin"
-  }
-}
-```
-
-Also test: `https://your-backend.vercel.app/api`
-
-Expected response:
-```json
-{
-  "success": true,
-  "message": "K_M_Cart API is running on Vercel! 🚀",
-  "version": "1.0.0",
-  "dbConnected": true
-}
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│   React Client  │──────▶│  Express API    │──────▶│  MongoDB Atlas  │
+│   (Vercel)      │  API  │  (Render)       │       │  (Cloud DB)     │
+│   Port: 443     │       │  Port: 443      │       │                 │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
 ```
 
 ---
 
-### 2. Frontend Deployment (Vercel)
+## Step 1: MongoDB Atlas Setup
 
-#### A. Update Environment Variables
-Create `client/.env` with:
-```env
-VITE_API_URL=https://your-backend.vercel.app
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-```
-
-#### B. Deploy to Vercel
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. Click **"Add New Project"**
-3. Import the same GitHub repository
-4. Configure project:
-   - **Framework Preset:** Vite
-   - **Root Directory:** `client`
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-
-#### C. Set Environment Variables
-In Vercel Dashboard → Project Settings → Environment Variables, add all `VITE_*` variables from above.
-
-#### D. Deploy
-- Click **"Deploy"**
-- Wait for deployment to complete
-- Copy the deployment URL (e.g., `https://your-frontend.vercel.app`)
-
-#### E. Update Backend CORS
-1. Go to backend Vercel project
-2. Update `CLIENT_URL` environment variable to your frontend URL
-3. Redeploy backend
-
----
-
-## 🔧 Post-Deployment Configuration
-
-### Update Firebase Storage Rules
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Navigate to **Storage → Rules**
-3. Update rules to allow authenticated uploads:
-
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /products/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-  }
-}
-```
-
-4. Click **"Publish"**
-
-### Create Admin User
-1. Register a new user on your deployed site
-2. Connect to MongoDB Atlas
-3. Find the user in the `users` collection
-4. Update the user document:
-   ```javascript
-   {
-     "role": "admin"
-   }
+1. Go to [mongodb.com/atlas](https://www.mongodb.com/atlas) → Sign up / Login
+2. Create a **Free Shared Cluster** (M0)
+3. Click **Connect** → **Connect your application**
+4. Copy the connection string:
    ```
+   mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/gkcart?retryWrites=true&w=majority
+   ```
+5. In **Network Access**, add `0.0.0.0/0` to allow all IPs (required for Render/Vercel)
 
 ---
 
-## 🧪 Testing Deployment
+## Step 2: Deploy Backend on Render
 
-### Backend Tests
-```bash
-# Root endpoint - API overview
-curl https://your-backend.vercel.app/
+### 2a. Push to GitHub
+Make sure your `server/` folder is in a Git repository on GitHub.
 
-# Health check
-curl https://your-backend.vercel.app/api
+### 2b. Create Render Service
+1. Go to [render.com](https://render.com) → Sign up with GitHub
+2. Click **New** → **Web Service**
+3. Connect your GitHub repo
+4. Configure:
+   - **Name**: `km-cart-api`
+   - **Root Directory**: `server`
+   - **Runtime**: Node
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server.js`
+   - **Instance Type**: Free
 
-# Database health
-curl https://your-backend.vercel.app/api/health
+### 2c. Set Environment Variables
+In Render Dashboard → Your Service → **Environment**:
 
-# Products endpoint
-curl https://your-backend.vercel.app/api/products
+| Variable | Value |
+|----------|-------|
+| `PORT` | `10000` (Render's default) |
+| `MONGODB_URI` | `mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/gkcart?retryWrites=true&w=majority` |
+| `JWT_SECRET` | A new random 64+ char hex string |
+| `NODE_ENV` | `production` |
+| `CLIENT_URL` | `https://your-frontend.vercel.app` (set after Step 3) |
+| `RAZORPAY_KEY_ID` | Your Razorpay key |
+| `RAZORPAY_KEY_SECRET` | Your Razorpay secret |
 
-# Admin stats (requires auth token)
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://your-backend.vercel.app/api/admin/stats
+### 2d. Deploy
+Click **Deploy** and wait for the build. Your API will be at:
+```
+https://km-cart-api.onrender.com
 ```
 
-### Frontend Tests
-1. Visit your frontend URL
-2. Test user registration/login
-3. Test product browsing
-4. Test cart functionality
-5. Test checkout with Razorpay
-6. Login as admin and test dashboard
+Test: `https://km-cart-api.onrender.com/api/health`
 
 ---
 
-## 🐛 Troubleshooting
+## Step 3: Deploy Frontend on Vercel
 
-### Backend Issues
+### 3a. Create Vercel Project
+1. Go to [vercel.com](https://vercel.com) → Sign up with GitHub
+2. Click **New Project** → Import your GitHub repo
+3. Configure:
+   - **Root Directory**: `client`
+   - **Framework Preset**: Vite
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
 
-#### "MONGODB_URI is not set"
-- Add `MONGODB_URI` in Vercel environment variables
-- Redeploy the backend
+### 3b. Set Environment Variables
+In Vercel Dashboard → Your Project → **Settings** → **Environment Variables**:
 
-#### "Authentication failed"
-- Check MongoDB username/password in connection string
-- Avoid special characters in password
-- Use URL encoding if needed
+| Variable | Value |
+|----------|-------|
+| `VITE_API_URL` | `https://km-cart-api.onrender.com` |
+| `VITE_FIREBASE_API_KEY` | Your Firebase API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Your Firebase auth domain |
+| `VITE_FIREBASE_PROJECT_ID` | Your Firebase project ID |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Your Firebase storage bucket |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Your Firebase sender ID |
+| `VITE_FIREBASE_APP_ID` | Your Firebase app ID |
 
-#### "Network timeout" or "getaddrinfo"
-- Add `0.0.0.0/0` to MongoDB Atlas Network Access
-- Wait 2-3 minutes for changes to propagate
+> **IMPORTANT**: `VITE_API_URL` should be just the base URL (e.g., `https://km-cart-api.onrender.com`).  
+> Do NOT include `/api` — that's appended automatically by `api.js`.
 
-#### "CORS error"
-- Verify `CLIENT_URL` matches your frontend URL exactly
-- No trailing slash in `CLIENT_URL`
-- Redeploy backend after changing `CLIENT_URL`
+### 3c. Add vercel.json (already exists)
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
 
-#### "Admin routes not working"
-- Verify `adminRoutes` is imported in `server/api/index.js`
-- Check Vercel function logs for errors
-- Ensure JWT token is valid
+### 3d. Deploy
+Click **Deploy**. Your frontend will be at:
+```
+https://your-project.vercel.app
+```
 
-### Frontend Issues
-
-#### "API calls failing"
-- Verify `VITE_API_URL` is set correctly
-- Check browser console for CORS errors
-- Ensure backend is deployed and running
-
-#### "Firebase upload not working"
-- Check Firebase Storage rules
-- Verify Firebase credentials in environment variables
-- Check browser console for Firebase errors
-
-#### "Build failing"
-- Check Vercel build logs
-- Ensure all dependencies are in `package.json`
-- Verify Node version compatibility
-
----
-
-## 📊 Monitoring
-
-### Vercel Dashboard
-- **Deployments:** View deployment history and logs
-- **Functions:** Monitor serverless function execution
-- **Analytics:** Track page views and performance
-- **Logs:** Real-time function logs for debugging
-
-### MongoDB Atlas
-- **Metrics:** Monitor database performance
-- **Alerts:** Set up alerts for issues
-- **Logs:** View database operation logs
+### 3e. Update Backend CORS
+Go back to **Render** → Environment Variables → Update:
+```
+CLIENT_URL=https://your-project.vercel.app
+```
+Redeploy the backend.
 
 ---
 
-## 🔐 Security Best Practices
+## Step 4: Fix CORS Issues
 
-### Environment Variables
-- ✅ Never commit `.env` files to GitHub
-- ✅ Use different credentials for dev/staging/production
-- ✅ Rotate secrets regularly
-- ✅ Use strong, random JWT secrets (64+ characters)
+If you still get CORS errors after deployment:
 
-### MongoDB
-- ✅ Use strong passwords
-- ✅ Enable MongoDB Atlas IP whitelist (0.0.0.0/0 for Vercel)
-- ✅ Regular backups
-- ✅ Monitor for suspicious activity
+### Checklist
+- [ ] `CLIENT_URL` in Render matches your exact Vercel URL (no trailing slash)
+- [ ] `VITE_API_URL` in Vercel matches your exact Render URL (no trailing slash)
+- [ ] `NODE_ENV=production` is set on Render
+- [ ] Multiple origins: use comma-separated values: `CLIENT_URL=https://app.vercel.app,https://custom-domain.com`
 
-### API Security
-- ✅ JWT authentication on protected routes
-- ✅ Rate limiting (consider adding)
-- ✅ Input validation
-- ✅ CORS properly configured
+### Debug
+Add this to test CORS:
+```bash
+curl -I -X OPTIONS https://km-cart-api.onrender.com/api/health \
+  -H "Origin: https://your-project.vercel.app" \
+  -H "Access-Control-Request-Method: GET"
+```
 
-### Firebase
-- ✅ Proper Storage rules (authenticated writes only)
-- ✅ File size limits enforced
-- ✅ File type validation
+You should see `Access-Control-Allow-Origin` in the response headers.
 
 ---
 
-## 📝 Environment Variables Reference
+## Step 5: Production .env Templates
 
-### Backend (server/.env)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MONGODB_URI` | MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/db` |
-| `JWT_SECRET` | Secret key for JWT tokens | 64+ character random string |
-| `CLIENT_URL` | Frontend URL for CORS | `https://your-frontend.vercel.app` |
-| `RAZORPAY_KEY_ID` | Razorpay API key | `rzp_live_xxxxxxxxxxxxx` |
-| `RAZORPAY_KEY_SECRET` | Razorpay secret key | Your secret key |
-| `NODE_ENV` | Environment | `production` |
-| `PORT` | Server port (local only) | `5000` |
+### server/.env (Render — set via dashboard, NOT committed)
+```env
+PORT=10000
+MONGODB_URI=mongodb+srv://user:pass@cluster0.mongodb.net/gkcart
+JWT_SECRET=<generate-a-new-64-char-hex-secret>
+NODE_ENV=production
+CLIENT_URL=https://your-frontend.vercel.app
+RAZORPAY_KEY_ID=rzp_live_xxxxx
+RAZORPAY_KEY_SECRET=xxxxx
+```
 
-### Frontend (client/.env)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `https://your-backend.vercel.app` |
-| `VITE_FIREBASE_API_KEY` | Firebase API key | Your API key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | `project.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID | `your-project-id` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | `project.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID | Your sender ID |
-| `VITE_FIREBASE_APP_ID` | Firebase app ID | Your app ID |
-| `VITE_FIREBASE_MEASUREMENT_ID` | Firebase measurement ID | `G-XXXXXXXXXX` |
-
----
-
-## 🎉 Deployment Complete!
-
-Your K_M_Cart application is now live! 
-
-- **Frontend:** https://your-frontend.vercel.app
-- **Backend:** https://your-backend.vercel.app
-- **Admin Panel:** https://your-frontend.vercel.app/admin
-
-**Next Steps:**
-1. Test all functionality thoroughly
-2. Monitor Vercel logs for any errors
-3. Set up custom domain (optional)
-4. Configure analytics (optional)
-5. Set up automated backups
+### client/.env (Vercel — set via dashboard, NOT committed)
+```env
+VITE_API_URL=https://km-cart-api.onrender.com
+VITE_FIREBASE_API_KEY=xxxxx
+VITE_FIREBASE_AUTH_DOMAIN=xxxxx.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=xxxxx
+VITE_FIREBASE_STORAGE_BUCKET=xxxxx.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=xxxxx
+VITE_FIREBASE_APP_ID=xxxxx
+```
 
 ---
 
-**Last Updated:** April 2026
-**Version:** 1.0.0
+## Security Reminders
+
+> ⚠️ **NEVER commit `.env` files to Git!**
+
+1. Rotate your MongoDB password (it's visible in the current `.env`)
+2. Generate a new JWT_SECRET for production
+3. Move from Razorpay test keys to live keys
+4. Both `.env` files are already in `.gitignore` ✅
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Blank page on Vercel | Ensure `vercel.json` has SPA rewrite rule |
+| API returns 404 | Check `VITE_API_URL` doesn't include `/api` |
+| CORS error | Verify `CLIENT_URL` on Render matches Vercel URL exactly |
+| MongoDB connection fails | Whitelist `0.0.0.0/0` in Atlas Network Access |
+| Render spin-down (free tier) | First request after inactivity takes ~30s — this is normal |

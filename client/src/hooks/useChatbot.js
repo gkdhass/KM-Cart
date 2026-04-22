@@ -13,10 +13,10 @@ import { useAuth } from '../context/AuthContext';
 
 /** Quick reply buttons shown after greeting */
 const QUICK_REPLIES = [
-  'Show Mobiles',
+  'Show Rice & Grains',
   'Track Order',
   'Return Policy',
-  'Laptops under ₹50000',
+  'Cooking Oils under ₹500',
 ];
 
 /** Initial welcome message from the bot */

@@ -12,12 +12,12 @@ import DataTable from '../../components/Admin/DataTable';
 const STATUS_OPTIONS = ['All', 'Pending', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
 
 const statusColors = {
-  Pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  Processing: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  Confirmed: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  Shipped: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  Delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  Cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
+  Pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  Processing: 'bg-blue-100 text-blue-800 border-blue-300',
+  Confirmed: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+  Shipped: 'bg-purple-100 text-purple-800 border-purple-300',
+  Delivered: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  Cancelled: 'bg-red-100 text-red-800 border-red-300',
 };
 
 function ManageOrders() {
@@ -71,39 +71,39 @@ function ManageOrders() {
     {
       header: 'Order ID',
       render: (row) => (
-        <span className="text-admin-accent font-mono text-sm font-medium">{row.orderId}</span>
+        <span className="text-[#F96D00] font-mono text-sm font-medium">{row.orderId}</span>
       ),
     },
     {
       header: 'Customer',
       render: (row) => (
         <div>
-          <p className="text-white text-sm">{row.userId?.name || 'Unknown'}</p>
-          <p className="text-slate-500 text-xs">{row.userId?.email || ''}</p>
+          <p className="text-gray-900 text-sm font-medium">{row.userId?.name || 'Unknown'}</p>
+          <p className="text-gray-500 text-xs">{row.userId?.email || ''}</p>
         </div>
       ),
     },
     {
       header: 'Items',
       render: (row) => (
-        <span className="text-slate-300 text-sm">{row.products?.length || 0} items</span>
+        <span className="text-gray-700 text-sm">{row.products?.length || 0} items</span>
       ),
     },
     {
       header: 'Amount',
       render: (row) => (
-        <span className="text-white font-semibold">₹{row.totalAmount?.toLocaleString('en-IN')}</span>
+        <span className="text-gray-900 font-semibold">₹{row.totalAmount?.toLocaleString('en-IN')}</span>
       ),
     },
     {
       header: 'Payment',
       render: (row) => (
         <div>
-          <span className="text-slate-300 text-xs">{row.paymentMethod}</span>
+          <span className="text-gray-700 text-xs">{row.paymentMethod}</span>
           <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${
-            row.paymentStatus === 'Paid' ? 'bg-emerald-500/10 text-emerald-400' :
-            row.paymentStatus === 'Failed' ? 'bg-red-500/10 text-red-400' :
-            'bg-yellow-500/10 text-yellow-400'
+            row.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
+            row.paymentStatus === 'Failed' ? 'bg-red-100 text-red-700' :
+            'bg-yellow-100 text-yellow-700'
           }`}>
             {row.paymentStatus}
           </span>
@@ -117,12 +117,12 @@ function ManageOrders() {
           value={row.status}
           onChange={(e) => handleStatusChange(row._id, e.target.value)}
           disabled={updatingId === row._id}
-          className={`text-xs font-medium px-3 py-1.5 rounded-lg border cursor-pointer bg-transparent focus:outline-none focus:ring-2 focus:ring-admin-accent/30 ${
-            statusColors[row.status] || 'text-slate-300 border-white/10'
+          className={`text-xs font-medium px-3 py-1.5 rounded-lg border cursor-pointer bg-transparent focus:outline-none focus:ring-2 focus:ring-[#F96D00]/30 ${
+            statusColors[row.status] || 'text-gray-700 border-gray-200'
           } ${updatingId === row._id ? 'opacity-50' : ''}`}
         >
           {STATUS_OPTIONS.filter(s => s !== 'All').map((status) => (
-            <option key={status} value={status} className="bg-admin-card text-white">
+            <option key={status} value={status} className="bg-white text-gray-900">
               {status}
             </option>
           ))}
@@ -132,7 +132,7 @@ function ManageOrders() {
     {
       header: 'Date',
       render: (row) => (
-        <span className="text-slate-400 text-xs">
+        <span className="text-gray-600 text-xs">
           {new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
       ),
@@ -143,28 +143,28 @@ function ManageOrders() {
     <div className="p-4 lg:p-6 space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h2 className="text-white text-2xl font-bold">Orders</h2>
-        <p className="text-slate-500 text-sm">Manage and track all customer orders</p>
+        <h2 className="text-gray-900 text-2xl font-bold">Orders</h2>
+        <p className="text-gray-500 text-sm">Manage and track all customer orders</p>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 flex items-center bg-admin-card/80 rounded-xl px-4 border border-white/5 focus-within:border-admin-accent/30 transition-colors">
-          <HiOutlineMagnifyingGlass className="w-4 h-4 text-slate-500" />
+        <div className="flex-1 flex items-center bg-white rounded-xl px-4 border border-[#E8C99A] focus-within:border-[#F96D00] transition-colors">
+          <HiOutlineMagnifyingGlass className="w-4 h-4 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search by Order ID..."
-            className="w-full bg-transparent px-3 py-3 text-white placeholder-slate-500 text-sm outline-none"
+            className="w-full bg-transparent px-3 py-3 text-gray-900 placeholder-gray-400 text-sm outline-none"
           />
         </div>
         <div className="flex items-center gap-2">
-          <HiOutlineFunnel className="w-4 h-4 text-slate-500" />
+          <HiOutlineFunnel className="w-4 h-4 text-gray-400" />
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="bg-admin-card/80 border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-admin-accent/30"
+            className="bg-white border border-[#E8C99A] text-gray-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F96D00]/30"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>

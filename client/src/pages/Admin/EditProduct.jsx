@@ -2,6 +2,7 @@
  * @file client/src/pages/Admin/EditProduct.jsx
  * @description Page for editing an existing product via the admin dashboard.
  * Pre-fills data from API and submits only changed fields.
+ * Theme: Cream/Peach (#FBE8CE) + Orange (#F96D00)
  */
 
 import { useState, useEffect } from 'react';
@@ -55,7 +56,7 @@ function EditProduct() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <div className="w-10 h-10 border-4 border-admin-accent/30 border-t-admin-accent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#E8C99A] border-t-[#F96D00] rounded-full animate-spin" />
       </div>
     );
   }
@@ -66,13 +67,13 @@ function EditProduct() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/admin/products')}
-          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+          className="p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-[#E8C99A] transition-colors"
         >
           <HiOutlineArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h2 className="text-white text-2xl font-bold">Edit Product</h2>
-          <p className="text-slate-500 text-sm truncate max-w-sm">{product?.name}</p>
+          <h2 className="text-gray-900 text-2xl font-bold">Edit Product</h2>
+          <p className="text-gray-500 text-sm truncate max-w-sm">{product?.name}</p>
         </div>
       </div>
 

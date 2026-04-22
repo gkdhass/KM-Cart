@@ -10,13 +10,15 @@ import axios from 'axios';
 /**
  * Base URL for API requests.
  * - Development: '/api' (Vite proxy forwards to localhost:5000)
- * - Production:  VITE_API_URL env var (e.g. 'https://g-k-cart-server.vercel.app/api')
+ * - Production:  VITE_API_URL env var (e.g. 'https://your-backend.onrender.com')
  *
- * Set VITE_API_URL in Vercel Dashboard → Client Project → Environment Variables
- * Example: VITE_API_URL = https://g-k-cart-server.vercel.app
+ * Set VITE_API_URL in hosting dashboard → Environment Variables
+ * Example: VITE_API_URL = https://your-backend.onrender.com
+ * NOTE: Do NOT include /api in the env var — it's appended automatically.
  */
-const API_BASE_URL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
+const rawUrl = import.meta.env.VITE_API_URL?.trim();
+const API_BASE_URL = rawUrl
+  ? `${rawUrl.replace(/\/+$/, '')}/api`
   : '/api';
 
 /**

@@ -121,7 +121,7 @@ function ManageProducts() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(`/product/${row._id}`)}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
             title="View"
           >
             <HiOutlineEye className="w-4 h-4" />
@@ -155,7 +155,7 @@ function ManageProducts() {
         </div>
         <Link
           to="/admin/products/add"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-admin-accent hover:bg-admin-accent-hover text-white rounded-xl font-medium transition-all shadow-lg shadow-admin-accent/25"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F96D00] hover:bg-[#E86500] text-white rounded-xl font-medium transition-all shadow-lg shadow-[#F96D00]/25"
         >
           <HiOutlinePlusCircle className="w-5 h-5" />
           Add Product
@@ -164,7 +164,7 @@ function ManageProducts() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 flex items-center bg-admin-card/80 rounded-xl px-4 border border-white/5 focus-within:border-admin-accent/30 transition-colors">
+        <div className="flex-1 flex items-center bg-white rounded-xl px-4 border border-[#E8C99A] focus-within:border-[#F96D00] transition-colors">
           <HiOutlineMagnifyingGlass className="w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -177,7 +177,7 @@ function ManageProducts() {
         <select
           value={sort}
           onChange={(e) => { setSort(e.target.value); setPage(1); }}
-          className="bg-admin-card/80 border border-white/5 text-black text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-admin-accent/30"
+          className="bg-white border border-[#E8C99A] text-gray-700 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F96D00]/30"
         >
           <option value="newest">Newest First</option>
           <option value="oldest">Oldest First</option>
