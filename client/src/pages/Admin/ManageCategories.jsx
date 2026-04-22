@@ -128,18 +128,30 @@ function ManageCategories() {
   };
 
   /** Delete category */
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      const res = await api.delete(`/admin/categories/${deleteTarget._id}`);
+      const url = force
+        ? `/admin/categories/${deleteTarget._id}?force=true`
+        : `/admin/categories/${deleteTarget._id}`;
+      const res = await api.delete(url);
       if (res.data.success) {
         toast.success(res.data.message);
         setDeleteTarget(null);
         fetchCategories();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete category');
+      const msg = error.response?.data?.message || 'Failed to delete category';
+      const hasProducts = error.response?.data?.productCount > 0;
+
+      if (hasProducts) {
+        // Show force delete confirmation
+        toast.error(msg);
+        setDeleteTarget((prev) => prev ? { ...prev, showForceOption: true } : null);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setDeleting(false);
     }
@@ -392,14 +404,22 @@ function ManageCategories() {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
+        onConfirm={() => {
+          if (deleteTarget?.showForceOption) {
+            handleDelete(true);
+          } else {
+            handleDelete(false);
+          }
+        }}
         title="Delete Category"
         message={
-          deleteTarget?.productCount > 0
-            ? `"${deleteTarget?.name}" has ${deleteTarget?.productCount} product(s). Move or delete them before deleting this category.`
-            : `Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`
+          deleteTarget?.showForceOption
+            ? `"${deleteTarget?.name}" has ${deleteTarget?.productCount || 'some'} product(s). Force deleting will move all products to "Uncategorized". Continue?`
+            : deleteTarget?.productCount > 0
+              ? `"${deleteTarget?.name}" has ${deleteTarget?.productCount} product(s). Move or delete them before deleting this category.`
+              : `Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`
         }
-        confirmText="Delete"
+        confirmText={deleteTarget?.showForceOption ? 'Force Delete' : 'Delete'}
         loading={deleting}
       />
     </div>

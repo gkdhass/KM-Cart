@@ -19,7 +19,10 @@ function Footer() {
 
         {/* Column 1: Brand */}
         <div>
-          <h3 className="text-gray-900 font-bold text-xl mb-4">K_M_Cart</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <img src="/logo.png" alt="K_M_Cart" className="w-8 h-8 rounded-lg shadow-sm" />
+            <h3 className="text-gray-900 font-bold text-xl">K_M_Cart</h3>
+          </div>
           <p className="text-sm text-gray-600 mb-4 leading-relaxed">
             Your AI-powered smart shopping destination. Find the best products at the best prices with our intelligent assistant.
           </p>

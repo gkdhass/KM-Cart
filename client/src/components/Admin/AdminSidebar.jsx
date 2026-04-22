@@ -57,9 +57,7 @@ function AdminSidebar({ isOpen, onClose }) {
         <div className="p-6 border-b border-[#E8C99A] bg-[#E4DFB5]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F96D00] to-[#E86500] flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-[#F96D00]/25">
-                K
-              </div>
+              <img src="/logo.png" alt="K_M_Cart" className="w-10 h-10 rounded-xl shadow-lg shadow-[#F96D00]/25" />
               <div>
                 <h1 className="text-gray-900 font-bold text-lg leading-tight">K_M_Cart</h1>
                 <p className="text-gray-600 text-xs font-medium">Admin Panel</p>

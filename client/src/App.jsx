@@ -44,12 +44,18 @@ import Analytics from './pages/Admin/Analytics';
 
 /**
  * Full-page loading spinner shown while auth state is being restored.
+ * Matches the splash screen design for seamless transition.
  */
 function LoadingSpinner() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
+      <img src="/logo.png" alt="K_M_Cart" className="w-16 h-16 rounded-2xl shadow-lg animate-pulse mb-4" />
       <p className="text-gray-500 text-sm font-medium">Loading K_M_Cart...</p>
+      <div className="flex gap-1.5 mt-4">
+        <div className="w-2 h-2 rounded-full bg-[#7C8BF2] animate-bounce" style={{ animationDelay: '0ms' }} />
+        <div className="w-2 h-2 rounded-full bg-[#7C8BF2] animate-bounce" style={{ animationDelay: '150ms' }} />
+        <div className="w-2 h-2 rounded-full bg-[#7C8BF2] animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
     </div>
   );
 }

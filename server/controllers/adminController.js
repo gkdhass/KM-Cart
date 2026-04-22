@@ -890,7 +890,7 @@ const updateCategory = async (req, res) => {
 
 /**
  * @route   DELETE /api/admin/categories/:id
- * @desc    Delete a category (only if no products use it)
+ * @desc    Delete a category. If products exist, use ?force=true to reassign them to "Uncategorized".
  * @access  Admin
  */
 const deleteCategory = async (req, res) => {
@@ -902,18 +902,43 @@ const deleteCategory = async (req, res) => {
 
     // Check if any products use this category
     const productCount = await Product.countDocuments({ category: category.name });
+
     if (productCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete "${category.name}" — ${productCount} product(s) still use this category. Move or delete them first.`,
-      });
+      const forceDelete = req.query.force === 'true';
+
+      if (!forceDelete) {
+        return res.status(400).json({
+          success: false,
+          productCount,
+          message: `Cannot delete "${category.name}" — ${productCount} product(s) still use this category. Move or delete them first.`,
+        });
+      }
+
+      // Force delete: move products to "Uncategorized"
+      await Product.updateMany(
+        { category: category.name },
+        { category: 'Uncategorized' }
+      );
+
+      // Ensure "Uncategorized" category exists
+      const uncatExists = await Category.findOne({ name: 'Uncategorized' });
+      if (!uncatExists) {
+        await Category.create({
+          name: 'Uncategorized',
+          description: 'Products moved from deleted categories',
+          order: 999,
+          isActive: true,
+        });
+      }
     }
 
     await Category.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
-      message: `Category "${category.name}" deleted successfully.`,
+      message: productCount > 0
+        ? `Category "${category.name}" deleted. ${productCount} product(s) moved to "Uncategorized".`
+        : `Category "${category.name}" deleted successfully.`,
     });
   } catch (error) {
     console.error('[deleteCategory] Error:', error.message);

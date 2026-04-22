@@ -91,11 +91,12 @@ function Navbar() {
           <div className="flex items-center justify-between h-16">
             {/* ── Brand Logo ──────────────────────────────────────────── */}
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C8BF2] to-[#5A6BE0]
-                              flex items-center justify-center shadow-md
-                              group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                <span className="text-white text-lg">🛒</span>
-              </div>
+              <img
+                src="/logo.png"
+                alt="K_M_Cart"
+                className="w-9 h-9 rounded-xl shadow-md
+                           group-hover:shadow-lg group-hover:scale-105 transition-all duration-200"
+              />
               <div>
                 <span className="text-lg font-bold gradient-text">K_M_Cart</span> <span>  </span>
                 <span className="hidden sm:inline text-[10px] text-[#7C8BF2] block -mt-1 font-medium">
