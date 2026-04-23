@@ -1,12 +1,4 @@
 {
-  "name": "km-cart",
-  "private": true,
-  "version": "1.0.0",
-  "scripts": {
-    "build": "cd client && npm install && npm run build",
-    "install:server": "cd server && npm install",
-    "vercel-build": "npm run install:server && npm run build"
-  },
   "dependencies": {
     "firebase": "^12.12.0"
   }
