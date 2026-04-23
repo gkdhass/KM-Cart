@@ -8,11 +8,16 @@
  * - Does NOT call app.listen()
  * - Exports a default serverless handler
  * - Caches the MongoDB connection across warm invocations
+ * - Handles CORS preflight explicitly (required for Vercel)
  */
 
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+
+// Load .env for local testing (Vercel ignores this in production)
+dotenv.config();
 
 // ─────────────────────────────────────────────────────────────────────
 // Import route modules (relative to server/ directory)
@@ -23,6 +28,7 @@ const productRoutes = require('../routes/productRoutes');
 const orderRoutes = require('../routes/orderRoutes');
 const paymentRoutes = require('../routes/paymentRoutes');
 const adminRoutes = require('../routes/adminRoutes');
+const categoryRoutes = require('../routes/categoryRoutes');
 
 // ─────────────────────────────────────────────────────────────────────
 // EXPRESS APP SETUP
@@ -38,7 +44,14 @@ const allowedOrigins = [
   'http://localhost:3000',
 ].filter(Boolean);
 
-app.use(cors({
+// If CLIENT_URL contains comma-separated values, split them
+if (process.env.CLIENT_URL && process.env.CLIENT_URL.includes(',')) {
+  const urls = process.env.CLIENT_URL.split(',').map((u) => u.trim());
+  allowedOrigins.length = 0;
+  allowedOrigins.push(...urls, 'http://localhost:5173', 'http://localhost:3000');
+}
+
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, Postman, health checks)
     if (!origin) return callback(null, true);
@@ -47,12 +60,17 @@ app.use(cors({
     }
     // In production, still allow if CLIENT_URL isn't set yet (first deploy)
     if (!process.env.CLIENT_URL) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
+    console.warn(`⚠️ CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
+
+// Handle OPTIONS preflight explicitly — CRITICAL for Vercel serverless
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // ── Body Parsers ────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -65,10 +83,11 @@ app.use(express.urlencoded({ extended: true }));
 // the same container across invocations ("warm starts"). We cache the
 // connection to avoid reconnecting on every single request.
 
-let isConnected = false;
+let cachedConnection = null;
 
 const connectDB = async () => {
-  if (isConnected) {
+  // Return early if already connected
+  if (cachedConnection && mongoose.connection.readyState === 1) {
     return;
   }
 
@@ -84,16 +103,15 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       bufferCommands: false,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
     });
 
-    isConnected = conn.connections[0].readyState === 1;
+    cachedConnection = conn;
     console.log('✅ MongoDB Connected:', conn.connection.host);
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
-    // Reset so next invocation retries
-    isConnected = false;
+    cachedConnection = null;
     throw error;
   }
 };
@@ -119,7 +137,8 @@ app.get('/', (req, res) => {
       orders: "/api/orders",
       payment: "/api/payment",
       chatbot: "/api/chatbot",
-      admin: "/api/admin"
+      admin: "/api/admin",
+      categories: "/api/categories",
     }
   });
 });
@@ -135,7 +154,7 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production',
-    dbConnected: isConnected,
+    dbConnected: mongoose.connection.readyState === 1,
   });
 });
 
@@ -176,6 +195,9 @@ app.use('/api/orders', orderRoutes);
 /** Payment routes (Razorpay create-order, verify) */
 app.use('/api/payment', paymentRoutes);
 
+/** Category routes (public — product filters) */
+app.use('/api/categories', categoryRoutes);
+
 /** Admin routes (dashboard, stats, manage products/users/orders) */
 app.use('/api/admin', adminRoutes);
 
@@ -213,17 +235,21 @@ module.exports = async (req, res) => {
       return app(req, res);
     }
 
+    // Skip DB connection for OPTIONS preflight
+    if (req.method === 'OPTIONS') {
+      return app(req, res);
+    }
+
     await connectDB();
     return app(req, res);
   } catch (error) {
     console.error('❌ Serverless handler error:', error.message);
     console.error('Stack:', error.stack);
 
-    // Return detailed error in non-production for debugging
+    // Return detailed error for debugging
     res.status(500).json({
       success: false,
       message: 'Server initialization failed. Please try again.',
-      // Show real error details to help debug (remove in production later)
       error: error.message,
       hint: getErrorHint(error.message),
     });

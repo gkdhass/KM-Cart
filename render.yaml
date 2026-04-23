@@ -1,0 +1,30 @@
+# ═══════════════════════════════════════════════════════════════
+# Render Blueprint — K_M_Cart Backend
+# ═══════════════════════════════════════════════════════════════
+# Deploy: Push to GitHub → connect repo in Render Dashboard
+# Or use "New → Blueprint" and point to this file.
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: km-cart-api
+    runtime: node
+    region: singapore  # Close to India for low latency
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        sync: false  # e.g. https://km-cart.vercel.app
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+    healthCheckPath: /api/health

@@ -10,10 +10,10 @@ import axios from 'axios';
 /**
  * Base URL for API requests.
  * - Development: '/api' (Vite proxy forwards to localhost:5000)
- * - Production:  VITE_API_URL env var (e.g. 'https://your-backend.onrender.com')
+ * - Production:  VITE_API_URL env var (e.g. 'https://km-cart-api.onrender.com')
  *
  * Set VITE_API_URL in hosting dashboard → Environment Variables
- * Example: VITE_API_URL = https://your-backend.onrender.com
+ * Example: VITE_API_URL = https://km-cart-api.onrender.com
  * NOTE: Do NOT include /api in the env var — it's appended automatically.
  */
 const rawUrl = import.meta.env.VITE_API_URL?.trim();
@@ -21,19 +21,25 @@ const API_BASE_URL = rawUrl
   ? `${rawUrl.replace(/\/+$/, '')}/api`
   : '/api';
 
+// Log the resolved API base URL in development
+if (import.meta.env.DEV) {
+  console.log('🔗 API Base URL:', API_BASE_URL);
+}
+
 /**
  * Pre-configured Axios instance for all API calls.
  * Includes:
  * - Base URL pointing to /api (proxied to Express server)
  * - JSON content type
- * - 10-second timeout
+ * - 30-second timeout (increased for cold-start resilience on Render free tier)
  */
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout (Render free tier can cold-start in ~15s)
+  withCredentials: true, // Send cookies for cross-origin requests
 });
 
 /**
@@ -75,9 +81,21 @@ api.interceptors.response.use(
           window.dispatchEvent(new Event('auth:expired'));
         }
       }
+
+      // Log server errors for debugging
+      if (error.response.status >= 500) {
+        console.error(
+          `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`,
+          error.response.status,
+          error.response.data?.message || error.response.statusText
+        );
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      // Timeout error
+      console.error('⏱️ API request timed out. The server may be starting up (cold start).');
     } else if (error.request) {
       // Request made but no response (network error)
-      console.error('Network error — no response received');
+      console.error('🌐 Network error — no response received. Check your internet connection.');
     }
 
     return Promise.reject(error);

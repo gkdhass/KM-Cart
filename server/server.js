@@ -3,6 +3,9 @@
  * @description Main Express server entry point for K_M_Cart backend.
  * Configures middleware, connects to MongoDB, registers all API routes,
  * and starts the HTTP server.
+ *
+ * Works for both local development and Render deployment.
+ * For Vercel serverless, see server/api/index.js instead.
  */
 
 const express = require('express');
@@ -36,26 +39,42 @@ const PORT = process.env.PORT || 5000;
 // MIDDLEWARE
 // ─────────────────────────────────────────────────────────────────────
 
-/** Enable CORS — production: restrict to CLIENT_URL origins, dev: allow all */
+/**
+ * CORS Configuration
+ * - Production: restrict to CLIENT_URL origins (comma-separated)
+ * - Development: allow all origins
+ * - Always allow requests with no origin (mobile apps, curl, Postman)
+ */
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map((url) => url.trim())
   : [];
 
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? function (origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, server-to-server)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        return callback(new Error('Not allowed by CORS'));
-      }
-    : '*',
+// Always include localhost for development
+if (!allowedOrigins.includes('http://localhost:5173')) {
+  allowedOrigins.push('http://localhost:5173');
+}
+if (!allowedOrigins.includes('http://localhost:3000')) {
+  allowedOrigins.push('http://localhost:3000');
+}
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman, health checks)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`⚠️ CORS blocked origin: ${origin}`);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 /** Parse incoming JSON request bodies (limit to 10mb) */
 app.use(express.json({ limit: '10mb' }));
@@ -78,11 +97,13 @@ if (process.env.NODE_ENV !== 'production') {
 
 /** Health check endpoint */
 app.get('/api/health', (req, res) => {
+  const { getConnectionState } = require('./config/db');
   res.status(200).json({
     success: true,
     message: 'K_M_Cart API is running! 🚀',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
+    database: getConnectionState(),
   });
 });
 
@@ -134,32 +155,63 @@ app.use((err, req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────
 
 /**
+ * Validate required environment variables on startup.
+ * Logs warnings for missing vars instead of crashing.
+ */
+function validateEnv() {
+  const required = ['MONGODB_URI', 'JWT_SECRET'];
+  const optional = ['CLIENT_URL', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'];
+  const missing = required.filter((key) => !process.env[key]);
+  const missingOptional = optional.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    console.error(`❌ FATAL: Missing required env vars: ${missing.join(', ')}`);
+    console.error('   Add them to .env (local) or hosting dashboard (production)');
+  }
+
+  if (missingOptional.length > 0) {
+    console.warn(`⚠️  Missing optional env vars: ${missingOptional.join(', ')}`);
+  }
+
+  return missing.length === 0;
+}
+
+/**
  * Connect to MongoDB and start the Express server.
- * Server only starts after successful DB connection.
+ * Server starts even if DB connection fails (will retry on first request).
  */
 const startServer = async () => {
+  // Validate environment
+  const envValid = validateEnv();
+  if (!envValid) {
+    console.error('❌ Fix environment variables before deploying to production.');
+  }
+
   try {
-    // Connect to MongoDB first
+    // Connect to MongoDB
     await connectDB();
 
-    // Seed default categories if none exist
-    await seedDefaultCategories();
-
-    // Start Express server
-    app.listen(PORT, () => {
-      console.log('\n═══════════════════════════════════════════════');
-      console.log('  🚀 K_M_Cart Server is running!');
-      console.log('═══════════════════════════════════════════════');
-      console.log(`  🌐 URL:         http://localhost:${PORT}`);
-      console.log(`  📡 API Base:    http://localhost:${PORT}/api`);
-      console.log(`  🏥 Health:      http://localhost:${PORT}/api/health`);
-      console.log(`  🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log('═══════════════════════════════════════════════\n');
-    });
+    // Seed default categories if none exist (non-blocking)
+    seedDefaultCategories().catch((err) =>
+      console.warn('⚠️  Category seeding skipped:', err.message)
+    );
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
-    process.exit(1);
+    console.error('⚠️  MongoDB connection failed on startup:', error.message);
+    console.error('   Server will start anyway and retry on first request.');
   }
+
+  // Start Express server regardless of DB state
+  app.listen(PORT, () => {
+    console.log('\n═══════════════════════════════════════════════');
+    console.log('  🚀 K_M_Cart Server is running!');
+    console.log('═══════════════════════════════════════════════');
+    console.log(`  🌐 URL:         http://localhost:${PORT}`);
+    console.log(`  📡 API Base:    http://localhost:${PORT}/api`);
+    console.log(`  🏥 Health:      http://localhost:${PORT}/api/health`);
+    console.log(`  🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`  🔗 Client URL:  ${process.env.CLIENT_URL || 'not set'}`);
+    console.log('═══════════════════════════════════════════════\n');
+  });
 };
 
 /**
