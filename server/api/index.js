@@ -36,41 +36,19 @@ const categoryRoutes = require('../routes/categoryRoutes');
 const app = express();
 
 // ── CORS Configuration ──────────────────────────────────────────────
-// Allow requests from the frontend domain in production.
-// Also allow requests with no origin (Postman, curl, mobile apps).
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-].filter(Boolean);
-
-// If CLIENT_URL contains comma-separated values, split them
-if (process.env.CLIENT_URL && process.env.CLIENT_URL.includes(',')) {
-  const urls = process.env.CLIENT_URL.split(',').map((u) => u.trim());
-  allowedOrigins.length = 0;
-  allowedOrigins.push(...urls, 'http://localhost:5173', 'http://localhost:3000');
-}
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, Postman, health checks)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    // In production, still allow if CLIENT_URL isn't set yet (first deploy)
-    if (!process.env.CLIENT_URL) return callback(null, true);
-    console.warn(`⚠️ CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
-    return callback(new Error(`Not allowed by CORS: ${origin}`));
-  },
+// Allow all origins — Vercel headers in vercel.json handle CORS at
+// the infrastructure level. Express just needs to not block anything.
+// This avoids origin mismatch issues between different Vercel subdomains
+// (e.g., kmcart.vercel.app vs km-cart.vercel.app).
+app.use(cors({
+  origin: true, // Reflect the request origin (allows any origin)
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-};
+}));
 
 // Handle OPTIONS preflight explicitly — CRITICAL for Vercel serverless
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
+app.options('*', cors());
 
 // ── Body Parsers ────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
