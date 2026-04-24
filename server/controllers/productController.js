@@ -43,7 +43,7 @@ const getProducts = async (req, res) => {
 
     // ── CATEGORY ─────────────────────────────────────────────────
     if (category && category.trim() && category.trim() !== 'all') {
-      andConditions.push({ category: category.trim() });
+      andConditions.push({ category: { $regex: new RegExp(`^${category.trim()}$`, 'i') } });
     }
 
     // ── PRICE RANGE ───────────────────────────────────────────────

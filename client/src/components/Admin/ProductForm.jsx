@@ -56,14 +56,25 @@ function ProductForm({ initialData = null, onSubmit, loading = false, submitLabe
         }
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        // Fallback categories if API fails
+        // Fallback categories matching the store frontend
         setCategories([
           { value: 'Oil', label: 'Oil' },
           { value: 'Masala', label: 'Masala' },
           { value: 'Rice & Grains', label: 'Rice & Grains' },
+          { value: 'Pulses & Dal', label: 'Pulses & Dal' },
           { value: 'Spices', label: 'Spices' },
+          { value: 'Sugar & Sweeteners', label: 'Sugar & Sweeteners' },
+          { value: 'Beverages', label: 'Beverages' },
+          { value: 'Household & Cleaning', label: 'Household & Cleaning' },
+          { value: 'Packaged & Ready', label: 'Packaged & Ready' },
           { value: 'Dairy', label: 'Dairy' },
           { value: 'Snacks', label: 'Snacks' },
+          { value: 'Biscuits & Cookies', label: 'Biscuits & Cookies' },
+          { value: 'Chocolates', label: 'Chocolates' },
+          { value: 'Juices & Drinks', label: 'Juices & Drinks' },
+          { value: 'Dry Fruits & Nuts', label: 'Dry Fruits & Nuts' },
+          { value: 'Pickles & Sauces', label: 'Pickles & Sauces' },
+          { value: 'Personal Care', label: 'Personal Care' },
         ]);
       }
     };
