@@ -424,6 +424,30 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+/**
+ * @route   DELETE /api/admin/orders/:id
+ * @desc    Delete an order
+ * @access  Admin
+ */
+const deleteOrder = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    await Order.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: `Order "${order.orderId}" deleted successfully.`,
+    });
+  } catch (error) {
+    console.error('[deleteOrder] Error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to delete order.' });
+  }
+};
+
 /* ═══════════════════════════════════════════════════════════════════════
    USER MANAGEMENT
    ═══════════════════════════════════════════════════════════════════════ */
@@ -955,6 +979,7 @@ module.exports = {
   deleteProduct,
   getAllOrders,
   updateOrderStatus,
+  deleteOrder,
   getAllUsers,
   updateUserRole,
   toggleBanUser,

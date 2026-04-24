@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { HiOutlineMagnifyingGlass, HiOutlineFunnel } from 'react-icons/hi2';
+import { HiOutlineMagnifyingGlass, HiOutlineFunnel, HiOutlineTrash } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
 import DataTable from '../../components/Admin/DataTable';
@@ -28,6 +28,7 @@ function ManageOrders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [updatingId, setUpdatingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -64,6 +65,24 @@ function ManageOrders() {
       toast.error(error.response?.data?.message || 'Failed to update status');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleDelete = async (orderId, orderDisplayId) => {
+    if (!window.confirm(`Are you sure you want to delete order "${orderDisplayId}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      setDeletingId(orderId);
+      const res = await api.delete(`/admin/orders/${orderId}`);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchOrders();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete order');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -135,6 +154,21 @@ function ManageOrders() {
         <span className="text-gray-600 text-xs">
           {new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
+      ),
+    },
+    {
+      header: '',
+      render: (row) => (
+        <button
+          onClick={() => handleDelete(row._id, row.orderId)}
+          disabled={deletingId === row._id}
+          title="Delete order"
+          className={`p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-all duration-200 ${
+            deletingId === row._id ? 'opacity-50 cursor-not-allowed animate-pulse' : 'cursor-pointer'
+          }`}
+        >
+          <HiOutlineTrash className="w-4 h-4" />
+        </button>
       ),
     },
   ];

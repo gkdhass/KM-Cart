@@ -18,6 +18,7 @@ const {
   deleteProduct,
   getAllOrders,
   updateOrderStatus,
+  deleteOrder,
   getAllUsers,
   updateUserRole,
   toggleBanUser,
@@ -52,6 +53,7 @@ router.delete('/products/:id', deleteProduct);
 /* ── Orders ────────────────────────────────────────────────────────── */
 router.get('/orders', getAllOrders);
 router.put('/orders/:id/status', updateOrderStatus);
+router.delete('/orders/:id', deleteOrder);
 
 /* ── Users ─────────────────────────────────────────────────────────── */
 router.get('/users', getAllUsers);
