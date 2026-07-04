@@ -10,6 +10,8 @@ import { FaTimes, FaTrash, FaPaperPlane } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi2';
 import ChatMessage from './ChatMessage';
 import TypingIndicator from './TypingIndicator';
+import VoiceSearchButton from './VoiceSearchButton';
+import ImageSearchButton from './ImageSearchButton';
 
 /**
  * ChatbotModal component — the main chat interface window.
@@ -29,6 +31,8 @@ import TypingIndicator from './TypingIndicator';
  * @param {Function} props.onSubmit - Form submit handler
  * @param {Function} props.onInputChange - Input change handler
  * @param {Function} props.onQuickReply - Quick reply click handler
+ * @param {Function} props.onVoiceTranscript - Voice transcript handler (optional)
+ * @param {Function} props.onImageResults - Image search results handler (optional)
  * @returns {JSX.Element|null} Chat modal or null if closed
  */
 function ChatbotModal({
@@ -44,6 +48,8 @@ function ChatbotModal({
   onSubmit,
   onInputChange,
   onQuickReply,
+  onVoiceTranscript,
+  onImageResults,
 }) {
   // Don't render if modal is closed
   if (!isOpen) return null;
@@ -143,6 +149,18 @@ function ChatbotModal({
         {/* ── Input Area ──────────────────────────────────────────────── */}
         <div className="flex-shrink-0 border-t border-gray-100 bg-white/80 backdrop-blur-sm p-3">
           <form onSubmit={onSubmit} className="flex items-center gap-2">
+            {/* Voice search button */}
+            <VoiceSearchButton
+              onVoiceTranscript={onVoiceTranscript}
+              disabled={isTyping}
+            />
+
+            {/* Image search button */}
+            <ImageSearchButton
+              onImageResults={onImageResults}
+              disabled={isTyping}
+            />
+
             {/* Text input */}
             <input
               ref={inputRef}

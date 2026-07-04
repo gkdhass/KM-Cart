@@ -2,6 +2,7 @@ const Product  = require('../models/Product');
 const Order    = require('../models/Order');
 const FAQ      = require('../models/FAQ');
 const { detectIntent } = require('../utils/intentDetector');
+const { matchProduct } = require('../utils/productMatcher');
 
 /**
  * Build a human-readable summary of applied filters
@@ -123,7 +124,7 @@ const handleChat = async (req, res) => {
       if (products.length === 0) {
         return res.json({
           type: 'text',
-          message: 'Sorry, I could not find any products matching "' + message + '". Try a different search like "show mobiles under ₹20000" or "top rated laptops".',
+          message: 'Sorry, I could not find any products matching "' + message + '". Try a different search like "show coconut oil under ₹200" or "best rated basmati rice".',
           data: null
         });
       }
@@ -206,7 +207,7 @@ const handleChat = async (req, res) => {
         delivery: 'Delivery Info: Standard delivery takes 3–7 business days across India. Orders above ₹500 qualify for FREE delivery. Express 1–2 day delivery is available in metro cities.',
         payment:  'Payment Options: We accept Cash on Delivery (COD), UPI (PhonePe, GPay, Paytm), Credit/Debit Cards, and Net Banking — all secured by Razorpay.',
         cancel:   'Cancellation Policy: Cancel anytime before your order is shipped. Go to My Orders → Cancel Order. Prepaid refunds are processed within 5–7 business days.',
-        warranty: 'Warranty: Mobiles and laptops come with 1-year manufacturer warranty. Accessories carry a 6-month warranty. Visit the brand service center with your invoice.'
+        warranty: 'Warranty: Most products come with manufacturer warranty where applicable. Contact customer care for specific warranty details on your purchased item.'
       };
 
       return res.json({
@@ -222,7 +223,7 @@ const handleChat = async (req, res) => {
     if (intent.type === 'greeting') {
       return res.json({
         type: 'text',
-        message: 'Hello! Welcome to K_M_Cart! Here is what I can do:\n\n🔍 Find products: "Show phones under ₹20000"\n📦 Track orders: "Track my order ORD-2024-0001"\n⭐ Filter by rating: "Laptops above 4.5 stars"\n❓ Answer questions: "What is your return policy?"\n\nWhat are you looking for today?',
+        message: 'Hello! Welcome to K_M_Cart! Here is what I can do:\n\n🔍 Find products: "Show coconut oil under ₹200"\n📦 Track orders: "Track my order ORD-2024-0001"\n⭐ Filter by rating: "Basmati rice above 4 stars"\n❓ Answer questions: "What is your return policy?"\n\nWhat are you looking for today?',
         data: null
       });
     }
@@ -232,7 +233,7 @@ const handleChat = async (req, res) => {
     // ════════════════════════════════════════════════════════════════
     return res.json({
       type: 'text',
-      message: 'I did not quite understand that. Here are some things you can ask:\n\n• "Show me mobiles under ₹15000"\n• "Best laptops with 4+ rating"\n• "Track order ORD-2024-0001"\n• "What is your return policy?"\n• "Watches under ₹2000"',
+      message: 'I did not quite understand that. Here are some things you can ask:\n\n• "Show me coconut oil under ₹250"\n• "Best basmati rice with 4+ rating"\n• "Track order ORD-2024-0001"\n• "What is your return policy?"\n• "Toor dal under ₹150"',
       data: null
     });
 
@@ -246,4 +247,95 @@ const handleChat = async (req, res) => {
   }
 };
 
-module.exports = { handleChat };
+/**
+ * @desc    Match voice-parsed shopping items to database products
+ * @route   POST /api/chatbot/voice-order
+ * @access  Public
+ * @body    { items: [{ rawText, productName, quantity, unit, priceHint }] }
+ * @returns { results: [{ status, product?, candidates?, query, inputIndex }] }
+ */
+const handleVoiceOrder = async (req, res) => {
+  try {
+    const { items } = req.body;
+
+    // Validate input
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request: items array required',
+        results: []
+      });
+    }
+
+    if (items.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No items to process',
+        results: []
+      });
+    }
+
+    // Process each item through matchProduct
+    const results = await Promise.all(
+      items.map(async (item, index) => {
+        try {
+          // Call matchProduct with the parsed data
+          const matchResult = await matchProduct({
+            text: item.productName,
+            unit: item.unit,
+            quantity: item.quantity,
+            brand: null // Could extract brand from productName if needed
+          });
+
+          // Add input metadata for frontend correlation
+          return {
+            ...matchResult,
+            inputIndex: index,
+            rawText: item.rawText,
+            requestedQuantity: item.quantity,
+            requestedUnit: item.unit,
+            priceHint: item.priceHint || null
+          };
+        } catch (error) {
+          console.error(`[VoiceOrder] Error matching item ${index}:`, error);
+          return {
+            status: 'notFound',
+            inputIndex: index,
+            rawText: item.rawText,
+            requestedQuantity: item.quantity,
+            requestedUnit: item.unit,
+            priceHint: item.priceHint || null,
+            query: { text: item.productName, unit: item.unit, quantity: item.quantity },
+            reason: 'Error processing item'
+          };
+        }
+      })
+    );
+
+    // Calculate summary statistics
+    const summary = {
+      total: results.length,
+      matched: results.filter(r => r.status === 'matched').length,
+      ambiguous: results.filter(r => r.status === 'ambiguous').length,
+      notFound: results.filter(r => r.status === 'notFound').length
+    };
+
+    return res.json({
+      success: true,
+      message: `Processed ${summary.total} items: ${summary.matched} matched, ${summary.ambiguous} ambiguous, ${summary.notFound} not found`,
+      results,
+      summary
+    });
+
+  } catch (error) {
+    console.error('[VoiceOrder] Error:', error.message, error.stack);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process voice order',
+      results: [],
+      error: error.message
+    });
+  }
+};
+
+module.exports = { handleChat, handleVoiceOrder };

@@ -6,7 +6,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { handleChat } = require('../controllers/chatbotController');
+const { handleChat, handleVoiceOrder } = require('../controllers/chatbotController');
 
 /**
  * @route   POST /api/chatbot
@@ -15,5 +15,14 @@ const { handleChat } = require('../controllers/chatbotController');
  * @body    { message: String, userId?: String }
  */
 router.post('/', handleChat);
+
+/**
+ * @route   POST /api/chatbot/voice-order
+ * @desc    Match voice-parsed shopping items to products in database
+ * @access  Public
+ * @body    { items: [{ rawText, productName, quantity, unit, priceHint }] }
+ * @returns { results: [{ status, product?, candidates?, query }] }
+ */
+router.post('/voice-order', handleVoiceOrder);
 
 module.exports = router;

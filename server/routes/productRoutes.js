@@ -12,7 +12,16 @@ const {
   addReview,
   toggleReviewLike,
 } = require('../controllers/productController');
+const { imageSearch } = require('../controllers/imageSearchController');
 const { protect } = require('../middleware/authMiddleware');
+const { upload, handleMulterError } = require('../middleware/upload');
+
+/**
+ * @route   POST /api/products/image-search
+ * @desc    Search products by uploading product image (OCR-based)
+ * @access  Public
+ */
+router.post('/image-search', upload.single('image'), handleMulterError, imageSearch);
 
 /**
  * @route   GET /api/products

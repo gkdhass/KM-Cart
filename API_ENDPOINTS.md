@@ -120,6 +120,138 @@
 **Description:** Get single product by ID  
 **Authentication:** None
 
+### POST `/api/products/image-search`
+**Description:** Search products by uploading a product image (OCR-based)  
+**Authentication:** None  
+**Content-Type:** `multipart/form-data`  
+**Body (Form Data):**
+- `image` (file, required) - Product image (JPEG, PNG, or WebP, max 5MB)
+
+**Success Response (Exact Match):**
+```json
+{
+  "success": true,
+  "message": "Found 3 product(s) matching the image",
+  "detectedText": "Parachute Coconut Oil 1L",
+  "detectedBrand": "Parachute",
+  "matchedProduct": {
+    "_id": "60d5ec49f1b2c72b8c8e4a1b",
+    "name": "Parachute Coconut Oil",
+    "brand": "Parachute",
+    "category": "Oil",
+    "price": 299,
+    "size": "1L",
+    "images": ["..."]
+  },
+  "products": [
+    {
+      "_id": "60d5ec49f1b2c72b8c8e4a1b",
+      "name": "Parachute Coconut Oil",
+      "size": "1L",
+      "price": 299
+    },
+    {
+      "_id": "60d5ec49f1b2c72b8c8e4a1c",
+      "name": "Parachute Coconut Oil",
+      "size": "500ml",
+      "price": 159
+    }
+  ],
+  "matchScore": 0.85,
+  "ocrText": "PARACHUTE\nCoconut Oil\n1 Liter\nNet Wt. 1000ml"
+}
+```
+
+**Success Response (Ambiguous Match):**
+```json
+{
+  "success": true,
+  "message": "Found 2 possible matches. Please select the correct product.",
+  "detectedText": "coconut oil 1l",
+  "detectedBrand": "Parachute",
+  "products": [
+    { "_id": "...", "name": "Parachute Coconut Oil", "size": "1L" },
+    { "_id": "...", "name": "KLF Coconut Oil", "size": "1L" }
+  ],
+  "ambiguous": true,
+  "ocrText": "coconut oil 1 liter"
+}
+```
+
+**Success Response (Brand Only):**
+```json
+{
+  "success": true,
+  "message": "Found 5 products from Parachute",
+  "detectedText": "parachute",
+  "detectedBrand": "Parachute",
+  "products": [
+    { "_id": "...", "name": "Parachute Coconut Oil", "size": "1L" },
+    { "_id": "...", "name": "Parachute Hair Cream", "size": "100g" }
+  ],
+  "brandOnly": true,
+  "ocrText": "PARACHUTE"
+}
+```
+
+**Failure Response (No Text Detected):**
+```json
+{
+  "success": false,
+  "message": "Could not detect any readable text in the image. Please try a clearer photo.",
+  "detectedText": "",
+  "detectedBrand": null,
+  "products": []
+}
+```
+
+**Failure Response (No Match):**
+```json
+{
+  "success": false,
+  "message": "Could not identify the product from the image. Try taking a clearer photo focusing on the product name and brand.",
+  "detectedText": "some unclear text",
+  "detectedBrand": null,
+  "products": [],
+  "ocrText": "..."
+}
+```
+
+**Error Response (No Image):**
+```json
+{
+  "success": false,
+  "message": "No image file uploaded. Please upload an image.",
+  "detectedText": null,
+  "detectedBrand": null,
+  "products": []
+}
+```
+
+**Error Response (Invalid File Type):**
+```json
+{
+  "success": false,
+  "message": "Invalid file type: application/pdf. Only JPEG, PNG, and WebP images are allowed."
+}
+```
+
+**Error Response (File Too Large):**
+```json
+{
+  "success": false,
+  "message": "File too large. Maximum size is 5MB."
+}
+```
+
+**Notes:**
+- Image should clearly show product name, brand, and any size/unit information
+- OCR works best with clear, well-lit photos taken straight-on
+- Supports English text and common Indian brand names
+- Returns multiple size variants when exact product match is found
+- Falls back to brand-only search if specific product cannot be identified
+- Temporary images are processed in memory and automatically cleaned up
+
 ### GET `/api/products/category/:category`
 **Description:** Get products by category  
 **Authentication:** None
@@ -202,7 +334,7 @@
 **Body:**
 ```json
 {
-  "message": "Show me laptops under 50000"
+  "message": "Show me coconut oil under 250"
 }
 ```
 
@@ -405,6 +537,12 @@ curl -X POST https://your-backend.vercel.app/api/auth/login \
 ### Get Products
 ```bash
 curl https://your-backend.vercel.app/api/products
+```
+
+### Image Search (Upload Product Photo)
+```bash
+curl -X POST https://your-backend.vercel.app/api/products/image-search \
+  -F "image=@/path/to/product-photo.jpg"
 ```
 
 ### Get Admin Stats (with token)

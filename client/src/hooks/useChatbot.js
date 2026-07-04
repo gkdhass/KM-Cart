@@ -228,6 +228,110 @@ export function useChatbot() {
     [isTyping, sendMessage]
   );
 
+  /**
+   * Handle voice transcript from VoiceSearchButton.
+   * Simply sends the transcript as a regular message to the chatbot.
+   * @param {String} transcript - The speech-to-text result
+   */
+  const sendVoiceTranscript = useCallback(
+    (transcript) => {
+      if (transcript && !isTyping) {
+        sendMessage(transcript);
+      }
+    },
+    [isTyping, sendMessage]
+  );
+
+  /**
+   * Handle image search results from ImageSearchButton.
+   * Formats the OCR results as a bot message with detected products.
+   * @param {Object} results - Image search API response
+   */
+  const sendImageSearch = useCallback(
+    async (results) => {
+      if (isTyping) return;
+
+      setIsTyping(true);
+
+      try {
+        // Simulate typing delay for natural feel
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        // Handle error response
+        if (!results.success || results.error) {
+          const errorMessage = {
+            id: generateId(),
+            role: 'bot',
+            type: 'text',
+            content: `😓 ${results.error || 'Failed to process the image. Please try again.'}`,
+            timestamp: new Date(),
+            isError: true,
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          setIsTyping(false);
+          return;
+        }
+
+        // Format bot response with OCR results
+        let content = '📸 **Image Search Results**\n\n';
+
+        if (results.extractedText) {
+          content += `📝 **Detected Text:** ${results.extractedText}\n\n`;
+        }
+
+        if (results.brands?.length > 0) {
+          content += `🏷️ **Brands Found:** ${results.brands.join(', ')}\n\n`;
+        }
+
+        if (results.products?.length > 0) {
+          content += `✅ **Matching Products:** ${results.products.length} found\n\n`;
+          content += 'Click on any product below to view details!';
+
+          const botMessage = {
+            id: generateId(),
+            role: 'bot',
+            type: 'products',
+            content,
+            data: results.products,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, botMessage]);
+        } else {
+          content += '❌ No matching products found in our catalog.\n\n';
+          content += 'Try uploading a clearer image or search by typing the product name!';
+
+          const botMessage = {
+            id: generateId(),
+            role: 'bot',
+            type: 'text',
+            content,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, botMessage]);
+        }
+
+        // Increment unread count if chat is closed
+        if (!isOpen) {
+          setUnreadCount((prev) => prev + 1);
+        }
+      } catch (error) {
+        console.error('Error processing image search:', error);
+        const errorMessage = {
+          id: generateId(),
+          role: 'bot',
+          type: 'text',
+          content: '😓 Sorry, I encountered an error processing the image. Please try again!',
+          timestamp: new Date(),
+          isError: true,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsTyping(false);
+      }
+    },
+    [isTyping, isOpen]
+  );
+
   // ── Return all state and handlers ──────────────────────────────────
   return {
     // State
@@ -250,6 +354,8 @@ export function useChatbot() {
     handleInputChange,
     handleSubmit,
     handleQuickReply,
+    sendVoiceTranscript,
+    sendImageSearch,
   };
 }
 

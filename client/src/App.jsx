@@ -27,6 +27,7 @@ import Profile from './pages/Profile';
 import ChatbotButton from './components/Chatbot/ChatbotButton';
 import ChatbotModal from './components/Chatbot/ChatbotModal';
 import { useChatbot } from './hooks/useChatbot';
+import VoiceSearch from './components/VoiceOrder/VoiceSearch';
 
 /* ── Admin Imports ─────────────────────────────────────────────────── */
 import AdminRoute from './components/Admin/AdminRoute';
@@ -117,6 +118,7 @@ function ConditionalChatbot() {
     messages, isOpen, isTyping, inputValue, unreadCount, quickReplies,
     messagesEndRef, inputRef, toggleChat, closeChat, clearChat,
     handleInputChange, handleSubmit, handleQuickReply,
+    sendVoiceTranscript, sendImageSearch,
   } = useChatbot();
 
   // Hide chatbot on admin pages
@@ -138,6 +140,8 @@ function ConditionalChatbot() {
         onSubmit={handleSubmit}
         onInputChange={handleInputChange}
         onQuickReply={handleQuickReply}
+        onVoiceTranscript={sendVoiceTranscript}
+        onImageResults={sendImageSearch}
       />
     </>
   );
@@ -190,6 +194,7 @@ function AppContent() {
           <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/voice-search" element={<ProtectedRoute><VoiceSearch /></ProtectedRoute>} />
 
           {/* Admin routes — protected by AdminRoute + AdminLayout */}
           <Route
