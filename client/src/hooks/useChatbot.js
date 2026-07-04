@@ -10,6 +10,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { parseShoppingList } from '../utils/voiceParser';
 
 /** Quick reply buttons shown after greeting */
 const QUICK_REPLIES = [
@@ -64,6 +66,7 @@ export function useChatbot() {
 
   // ── Auth Context ───────────────────────────────────────────────────
   const { user } = useAuth();
+  const { addToCart, cartTotal } = useCart();
 
   /**
    * Auto-scroll to the bottom of the messages area when new messages arrive.
@@ -230,16 +233,158 @@ export function useChatbot() {
 
   /**
    * Handle voice transcript from VoiceSearchButton.
-   * Simply sends the transcript as a regular message to the chatbot.
+   * Parses transcript into shopping items, sends to voice-order endpoint,
+   * automatically adds matched products to cart, and displays results.
    * @param {String} transcript - The speech-to-text result
    */
   const sendVoiceTranscript = useCallback(
-    (transcript) => {
-      if (transcript && !isTyping) {
-        sendMessage(transcript);
+    async (transcript) => {
+      if (!transcript || isTyping) return;
+
+      console.log('[VoiceOrder Frontend] Processing transcript:', transcript);
+
+      setIsTyping(true);
+
+      try {
+        // Parse transcript into structured items
+        const parsed = parseShoppingList(transcript);
+        console.log('[VoiceOrder Frontend] Parsed items:', parsed.items);
+        console.log('[VoiceOrder Frontend] Commands:', parsed.commands);
+
+        // Handle commands (show total, checkout, etc.)
+        if (parsed.commands.length > 0) {
+          for (const command of parsed.commands) {
+            if (command.type === 'show_total') {
+              // Show current cart total
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              const totalMessage = {
+                id: generateId(),
+                role: 'bot',
+                type: 'text',
+                content: `🛒 **Your cart total:** ₹${cartTotal.toFixed(2)}`,
+                timestamp: new Date(),
+              };
+              setMessages((prev) => [...prev, totalMessage]);
+            }
+          }
+        }
+
+        // If no items to process, return
+        if (parsed.items.length === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const noItemsMessage = {
+            id: generateId(),
+            role: 'bot',
+            type: 'text',
+            content: "I didn't detect any products in your request. Try saying something like '1 Kg rice' or '2 liters oil'.",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, noItemsMessage]);
+          setIsTyping(false);
+          return;
+        }
+
+        // Send to voice-order endpoint
+        const response = await api.post('/chatbot/voice-order', {
+          items: parsed.items,
+        });
+
+        const { results, summary } = response.data;
+        console.log('[VoiceOrder Frontend] Results:', results);
+        console.log('[VoiceOrder Frontend] Summary:', summary);
+
+        // Process results
+        let addedCount = 0;
+        let ambiguousItems = [];
+        let notFoundItems = [];
+
+        for (const result of results) {
+          if (result.status === 'matched') {
+            // Add to cart automatically
+            addToCart(result.product);
+            addedCount++;
+          } else if (result.status === 'ambiguous') {
+            ambiguousItems.push(result);
+          } else if (result.status === 'notFound') {
+            notFoundItems.push(result);
+          }
+        }
+
+        // Build response message
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        let responseContent = '🎤 **Voice Order Results**\n\n';
+
+        if (addedCount > 0) {
+          responseContent += `✅ **Added to cart:** ${addedCount} item(s)\n`;
+        }
+
+        if (ambiguousItems.length > 0) {
+          responseContent += `\n❓ **Ambiguous (${ambiguousItems.length}):**\n`;
+          ambiguousItems.forEach((item) => {
+            responseContent += `• "${item.rawText}" - Multiple matches found\n`;
+          });
+        }
+
+        if (notFoundItems.length > 0) {
+          responseContent += `\n❌ **Not found (${notFoundItems.length}):**\n`;
+          notFoundItems.forEach((item) => {
+            responseContent += `• "${item.rawText}"\n`;
+          });
+        }
+
+        responseContent += `\n💰 **Cart Total:** ₹${cartTotal.toFixed(2)}`;
+
+        const botMessage = {
+          id: generateId(),
+          role: 'bot',
+          type: addedCount > 0 && ambiguousItems.length === 0 ? 'text' : 'text',
+          content: responseContent,
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, botMessage]);
+
+        // If there are ambiguous items, show them as product cards
+        if (ambiguousItems.length > 0 && ambiguousItems[0].candidates) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          const ambiguousMessage = {
+            id: generateId(),
+            role: 'bot',
+            type: 'products',
+            content: 'Please select which product you meant:',
+            data: ambiguousItems[0].candidates.map((c) => c.product),
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, ambiguousMessage]);
+        }
+
+        // Increment unread count if chat is closed
+        if (!isOpen) {
+          setUnreadCount((prev) => prev + 1);
+        }
+      } catch (error) {
+        console.error('[VoiceOrder Frontend] Error:', error);
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const errorMessage = {
+          id: generateId(),
+          role: 'bot',
+          type: 'text',
+          content:
+            error.response?.data?.message ||
+            '😓 Sorry, I had trouble processing your voice order. Please try again!',
+          timestamp: new Date(),
+          isError: true,
+        };
+
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsTyping(false);
       }
     },
-    [isTyping, sendMessage]
+    [isTyping, addToCart, cartTotal, isOpen]
   );
 
   /**

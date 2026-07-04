@@ -178,40 +178,76 @@ function validateEnv() {
 
 /**
  * Connect to MongoDB and start the Express server.
- * Server starts even if DB connection fails (will retry on first request).
+ * WAITS for MongoDB connection before accepting requests.
+ * Exits with clear error if connection fails.
  */
 const startServer = async () => {
   // Validate environment
   const envValid = validateEnv();
   if (!envValid) {
     console.error('❌ Fix environment variables before deploying to production.');
+    process.exit(1);
   }
 
+  console.log('🔄 Connecting to MongoDB...');
+  
   try {
-    // Connect to MongoDB
-    await connectDB();
+    // Connect to MongoDB with timeout
+    const connectionPromise = connectDB();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+    );
+    
+    await Promise.race([connectionPromise, timeoutPromise]);
+    
+    console.log('✅ MongoDB connection established');
 
     // Seed default categories if none exist (non-blocking)
     seedDefaultCategories().catch((err) =>
       console.warn('⚠️  Category seeding skipped:', err.message)
     );
-  } catch (error) {
-    console.error('⚠️  MongoDB connection failed on startup:', error.message);
-    console.error('   Server will start anyway and retry on first request.');
-  }
 
-  // Start Express server regardless of DB state
-  app.listen(PORT, () => {
-    console.log('\n═══════════════════════════════════════════════');
-    console.log('  🚀 K_M_Cart Server is running!');
-    console.log('═══════════════════════════════════════════════');
-    console.log(`  🌐 URL:         http://localhost:${PORT}`);
-    console.log(`  📡 API Base:    http://localhost:${PORT}/api`);
-    console.log(`  🏥 Health:      http://localhost:${PORT}/api/health`);
-    console.log(`  🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`  🔗 Client URL:  ${process.env.CLIENT_URL || 'not set'}`);
-    console.log('═══════════════════════════════════════════════\n');
-  });
+    // Start Express server ONLY AFTER DB connected
+    app.listen(PORT, () => {
+      console.log('\n═══════════════════════════════════════════════');
+      console.log('  🚀 K_M_Cart Server is running!');
+      console.log('═══════════════════════════════════════════════');
+      console.log(`  🌐 URL:         http://localhost:${PORT}`);
+      console.log(`  📡 API Base:    http://localhost:${PORT}/api`);
+      console.log(`  🏥 Health:      http://localhost:${PORT}/api/health`);
+      console.log(`  🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`  🔗 Client URL:  ${process.env.CLIENT_URL || 'not set'}`);
+      console.log('═══════════════════════════════════════════════\n');
+    });
+
+  } catch (error) {
+    console.error('\n❌ FATAL: Failed to connect to MongoDB');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error(`   Error: ${error.message}`);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    if (error.message?.includes('IP') || error.message?.includes('whitelist')) {
+      console.error('   🔧 FIX: Whitelist your IP in MongoDB Atlas');
+      console.error('   1. Go to: https://cloud.mongodb.com');
+      console.error('   2. Click "Network Access" (left sidebar)');
+      console.error('   3. Click "+ ADD IP ADDRESS"');
+      console.error('   4. Click "ADD CURRENT IP ADDRESS"');
+      console.error('   5. Click "Confirm" and wait 2-3 minutes\n');
+    } else if (error.message?.includes('timeout')) {
+      console.error('   🔧 FIX: Connection timeout - check your internet connection');
+      console.error('   Or: MongoDB Atlas may be slow - try again in a moment\n');
+    } else if (error.message?.includes('authentication') || error.message?.includes('credentials')) {
+      console.error('   🔧 FIX: Check your MONGODB_URI credentials in .env');
+      console.error('   Format: mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/\n');
+    } else {
+      console.error('   🔧 FIX: Check your MONGODB_URI in .env file');
+      console.error('   Current URI: ' + (process.env.MONGODB_URI ? '[set]' : '[not set]') + '\n');
+    }
+    
+    console.error('   Server will NOT start until MongoDB connection succeeds.');
+    console.error('   Fix the issue above and restart the server.\n');
+    process.exit(1);
+  }
 };
 
 /**

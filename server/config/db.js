@@ -40,13 +40,13 @@ const connectDB = async () => {
 
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // Performance: disable command buffering for serverless
-      bufferCommands: false,
+      // Performance: buffer commands while connecting (wait for connection)
+      bufferCommands: true,
       // Connection pool settings
       maxPoolSize: 10,
       minPoolSize: 2,
       // Timeouts for cloud environments (Atlas can be slow on first connect)
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 15000,  // Increased to 15s for initial connection
       socketTimeoutMS: 45000,
       // Heartbeat to keep connection alive
       heartbeatFrequencyMS: 30000,
