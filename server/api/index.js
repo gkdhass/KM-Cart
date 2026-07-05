@@ -48,22 +48,32 @@ if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:5173', 'http://localhost:3000');
 }
 
+// CRITICAL: Always allow both frontend Vercel domains explicitly
+// (handles case where CLIENT_URL might not be set or is pointing at wrong domain)
+const vercelFrontendDomains = [
+  'https://kmcart.vercel.app',      // Frontend domain (no hyphen)
+  'https://km-cart.vercel.app'      // Backend domain (with hyphen) - allow for testing
+];
+
+allowedOrigins.push(...vercelFrontendDomains);
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, health checks)
     if (!origin) return callback(null, true);
     
-    // Allow any origin in production if CLIENT_URL not set (temporary)
-    if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+    // Check against whitelist (includes CLIENT_URL + Vercel domains)
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-    // Check against whitelist
-    if (allowedOrigins.includes(origin) || origin.includes('vercel.app')) {
+    // Fallback: Allow any *.vercel.app subdomain (dev/preview deployments)
+    if (origin && origin.includes('.vercel.app')) {
       return callback(null, true);
     }
     
     console.warn(`⚠️ CORS blocked: ${origin}`);
+    console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
