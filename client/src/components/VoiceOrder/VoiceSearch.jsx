@@ -10,9 +10,7 @@ import { parseShoppingList, formatParsedItems } from '../../utils/voiceParser';
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import api from '../../utils/api';
 
 const VoiceSearch = () => {
   // Voice recognition state
@@ -191,7 +189,7 @@ const VoiceSearch = () => {
         setIsProcessing(true);
         
         try {
-          const response = await axios.post(`${API_URL}/api/chatbot/voice-order`, {
+          const response = await api.post('/chatbot/voice-order', {
             items: result.items
           });
 
