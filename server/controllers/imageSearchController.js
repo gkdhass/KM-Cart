@@ -94,63 +94,19 @@ async function searchWithGemini(imageBuffer, mimeType) {
       };
     }
     
-    // Build search query
-    const query = {
+    // PRIMARY MATCH: Brand-only (always reliable)
+    // Category and product name are used for RANKING, not filtering
+    console.log('[ImageSearch] Primary brand-only query for:', matchedBrand);
+    
+    const allBrandProducts = await Product.find({
       brand: matchedBrand,
       isActive: true,
-    };
+    }).lean();
     
-    // Add category filter if detected
-    if (geminiResult.category) {
-      query.category = { $regex: geminiResult.category, $options: 'i' };
-    }
-    
-    // Add product name filter if detected
-    if (geminiResult.product) {
-      const productWords = geminiResult.product.split(' ').filter(w => w.length > 2);
-      if (productWords.length > 0) {
-        query.$or = productWords.map(word => ({
-          name: { $regex: word, $options: 'i' }
-        }));
-      }
-    }
-    
-    console.log('[ImageSearch] Querying database with:', query);
-    
-    // Query products
-    const products = await Product.find(query)
-      .sort({ rating: -1, reviewCount: -1 })
-      .limit(20)
-      .lean();
-    
-    if (products.length === 0) {
-      // Try broader search with just brand
-      console.log('[ImageSearch] No specific match, trying brand-only search...');
-      const brandProducts = await Product.find({
-        brand: matchedBrand,
-        isActive: true,
-      })
-      .sort({ rating: -1, reviewCount: -1 })
-      .limit(10)
-      .lean();
-      
-      if (brandProducts.length > 0) {
-        return {
-          success: true,
-          message: `Found ${brandProducts.length} products from ${matchedBrand}. We couldn't find the exact product "${geminiResult.product}", but here are similar items.`,
-          detectedText: `${geminiResult.brand} ${geminiResult.product}`.trim(),
-          detectedBrand: matchedBrand,
-          detectedProduct: geminiResult.product,
-          detectedCategory: geminiResult.category,
-          products: brandProducts,
-          brandOnly: true,
-          source: 'gemini'
-        };
-      }
-      
+    if (allBrandProducts.length === 0) {
       return {
         success: false,
-        message: `We found the brand "${matchedBrand}" but couldn't locate "${geminiResult.product}" in our catalog.`,
+        message: `We found the brand "${matchedBrand}" but no active products are available.`,
         detectedText: `${geminiResult.brand} ${geminiResult.product}`.trim(),
         detectedBrand: matchedBrand,
         detectedProduct: geminiResult.product,
@@ -160,10 +116,70 @@ async function searchWithGemini(imageBuffer, mimeType) {
       };
     }
     
-    // Success!
+    console.log('[ImageSearch] Found', allBrandProducts.length, 'products for brand:', matchedBrand);
+    
+    // RANKING: Score products by category and product name matches
+    const scoredProducts = allBrandProducts.map(product => {
+      let score = 0;
+      const productNameLower = (product.name || '').toLowerCase();
+      const productCategoryLower = (product.category || '').toLowerCase();
+      const detectedProductLower = (geminiResult.product || '').toLowerCase();
+      const detectedCategoryLower = (geminiResult.category || '').toLowerCase();
+      
+      // Category match boost (but not required)
+      if (detectedCategoryLower && productCategoryLower.includes(detectedCategoryLower)) {
+        score += 10;
+        console.log(`  [Rank] +10 category match: ${product.name} (${product.category})`);
+      } else if (detectedCategoryLower && detectedCategoryLower.includes(productCategoryLower)) {
+        score += 5;
+        console.log(`  [Rank] +5 partial category match: ${product.name}`);
+      }
+      
+      // Product name match boost
+      if (detectedProductLower) {
+        const detectedWords = detectedProductLower.split(' ').filter(w => w.length > 2);
+        detectedWords.forEach(word => {
+          if (productNameLower.includes(word)) {
+            score += 3;
+            console.log(`  [Rank] +3 product word match "${word}": ${product.name}`);
+          }
+        });
+      }
+      
+      // Boost for higher-rated products (tie-breaker)
+      score += (product.rating || 0) * 0.5;
+      
+      return { ...product, _matchScore: score };
+    });
+    
+    // Sort by score (highest first), then by rating
+    scoredProducts.sort((a, b) => {
+      if (b._matchScore !== a._matchScore) {
+        return b._matchScore - a._matchScore;
+      }
+      return (b.rating || 0) - (a.rating || 0);
+    });
+    
+    // Take top 20 results
+    const topProducts = scoredProducts.slice(0, 20);
+    
+    // Remove scoring metadata before returning
+    const products = topProducts.map(({ _matchScore, ...product }) => product);
+    
+    console.log('[ImageSearch] Returning', products.length, 'ranked products');
+    console.log('[ImageSearch] Top match:', products[0]?.name, '(score:', topProducts[0]?._matchScore, ')');
+    
+    // Determine message based on ranking
+    let message;
+    if (topProducts[0]?._matchScore > 10) {
+      message = `Found ${products.length} products from ${matchedBrand}, with close matches at the top.`;
+    } else {
+      message = `Found ${products.length} products from ${matchedBrand}. Review the results to find your product.`;
+    }
+    
     return {
       success: true,
-      message: `Found ${products.length} matching product(s)`,
+      message,
       detectedText: `${geminiResult.brand} ${geminiResult.product}`.trim(),
       detectedBrand: matchedBrand,
       detectedProduct: geminiResult.product,

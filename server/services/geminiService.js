@@ -53,7 +53,43 @@ function bufferToImagePart(imageBuffer, mimeType) {
 }
 
 /**
+ * Check if error is a transient network failure that can be retried
+ * @param {Error} error - The error object
+ * @returns {boolean} True if error is network-related and can be retried
+ */
+function isRetryableNetworkError(error) {
+  const errorMsg = (error.message || '').toLowerCase();
+  const errorCode = error.code || '';
+  
+  // Network-level failures (NOT API errors like 401/403/429)
+  const networkErrors = [
+    'fetch failed',
+    'econnreset',
+    'etimedout',
+    'enotfound',
+    'econnrefused',
+    'network request failed',
+    'socket hang up',
+    'getaddrinfo'
+  ];
+  
+  return networkErrors.some(pattern => 
+    errorMsg.includes(pattern) || errorCode === pattern.toUpperCase()
+  );
+}
+
+/**
+ * Sleep for specified milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Extract product information from image using Gemini Vision API
+ * Includes retry logic for transient network failures
  * @param {Buffer} imageBuffer - Product image buffer
  * @param {string} mimeType - Image MIME type
  * @returns {Promise<Object>} Extracted product info: { brand, product, category, unit, quantity }
@@ -102,61 +138,93 @@ Analyze the image now:`;
   // Convert image buffer to Gemini format
   const imagePart = bufferToImagePart(imageBuffer, mimeType);
   
-  try {
-    // Generate content with image and prompt
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = result.response;
-    const text = response.text();
-    
-    console.log('[Gemini] Raw response:', text);
-    
-    // Parse JSON response
-    let productInfo;
+  // Retry configuration
+  const MAX_RETRIES = 2; // Total attempts = 3 (1 initial + 2 retries)
+  const BACKOFF_MS = 1000; // Start with 1 second backoff
+  
+  let lastError;
+  
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      // Remove markdown code blocks if present
-      const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      productInfo = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error('[Gemini] Failed to parse JSON response:', parseError.message);
-      throw new Error(`Invalid JSON response from Gemini: ${text.substring(0, 200)}`);
+      // Log retry attempt
+      if (attempt > 0) {
+        const backoffTime = BACKOFF_MS * attempt;
+        console.log(`[Gemini] Retry attempt ${attempt}/${MAX_RETRIES} after ${backoffTime}ms backoff...`);
+        await sleep(backoffTime);
+      }
+      
+      // Generate content with image and prompt
+      const result = await model.generateContent([prompt, imagePart]);
+      const response = result.response;
+      const text = response.text();
+      
+      console.log('[Gemini] Raw response:', text);
+      
+      // Parse JSON response
+      let productInfo;
+      try {
+        // Remove markdown code blocks if present
+        const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        productInfo = JSON.parse(cleanedText);
+      } catch (parseError) {
+        console.error('[Gemini] Failed to parse JSON response:', parseError.message);
+        throw new Error(`Invalid JSON response from Gemini: ${text.substring(0, 200)}`);
+      }
+      
+      // Validate response structure
+      if (!productInfo || typeof productInfo !== 'object') {
+        throw new Error('Invalid product info structure returned from Gemini');
+      }
+      
+      console.log('[Gemini] ✓ Extracted product info:', productInfo);
+      
+      // Success - return result
+      return {
+        brand: productInfo.brand || null,
+        product: productInfo.product || null,
+        category: productInfo.category || null,
+        unit: productInfo.unit || null,
+        quantity: productInfo.quantity || null,
+        rawResponse: text, // Include raw response for debugging
+      };
+      
+    } catch (error) {
+      lastError = error;
+      
+      // Handle API-level errors (do NOT retry these)
+      if (error.message?.includes('API key')) {
+        throw new Error('Invalid or expired Gemini API key');
+      }
+      if (error.message?.includes('quota')) {
+        throw new Error('Gemini API quota exceeded. Please try again later.');
+      }
+      if (error.message?.includes('429')) {
+        throw new Error('Gemini API rate limit exceeded. Please wait a moment and try again.');
+      }
+      
+      // Check if this is a retryable network error
+      const isNetworkError = isRetryableNetworkError(error);
+      
+      console.error('[Gemini] Error on attempt', attempt + 1, ':', {
+        message: error.message,
+        code: error.code,
+        isNetworkError,
+        willRetry: isNetworkError && attempt < MAX_RETRIES
+      });
+      
+      // If it's not a network error, or we've exhausted retries, throw immediately
+      if (!isNetworkError || attempt >= MAX_RETRIES) {
+        throw error;
+      }
+      
+      // Otherwise, continue to next retry attempt
+      console.log('[Gemini] ⚠️ Network error detected, will retry...');
     }
-    
-    // Validate response structure
-    if (!productInfo || typeof productInfo !== 'object') {
-      throw new Error('Invalid product info structure returned from Gemini');
-    }
-    
-    console.log('[Gemini] ✓ Extracted product info:', productInfo);
-    
-    return {
-      brand: productInfo.brand || null,
-      product: productInfo.product || null,
-      category: productInfo.category || null,
-      unit: productInfo.unit || null,
-      quantity: productInfo.quantity || null,
-      rawResponse: text, // Include raw response for debugging
-    };
-    
-  } catch (error) {
-    // Handle Gemini API errors
-    if (error.message?.includes('API key')) {
-      throw new Error('Invalid or expired Gemini API key');
-    }
-    if (error.message?.includes('quota')) {
-      throw new Error('Gemini API quota exceeded. Please try again later.');
-    }
-    if (error.message?.includes('429')) {
-      throw new Error('Gemini API rate limit exceeded. Please wait a moment and try again.');
-    }
-    
-    console.error('[Gemini] API Error:', {
-      message: error.message,
-      status: error.status,
-      statusText: error.statusText,
-    });
-    
-    throw error;
   }
+  
+  // If we get here, all retries failed
+  console.error('[Gemini] ✗ All retry attempts exhausted');
+  throw lastError;
 }
 
 module.exports = {

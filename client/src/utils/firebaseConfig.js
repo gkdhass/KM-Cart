@@ -10,6 +10,8 @@ import {
   GoogleAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
@@ -97,6 +99,18 @@ function getFirebaseErrorMessage(error) {
   }
 }
 
+// ── Helper: Detect mobile viewport ───────────────────────────────────
+function isMobileViewport() {
+  // Check viewport width
+  if (window.innerWidth <= 768) return true;
+  
+  // Check user agent for mobile devices
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+  
+  return mobileRegex.test(userAgent.toLowerCase());
+}
+
 // ── Google Sign In ───────────────────────────────────────────────────
 export const signInWithGoogle = async () => {
   if (!firebaseReady || !auth || !googleProvider) {
@@ -105,7 +119,23 @@ export const signInWithGoogle = async () => {
     );
   }
 
+  // Detect if we should use redirect instead of popup
+  const shouldUseRedirect = isMobileViewport();
+  
+  console.log('[Firebase] Google sign-in method:', shouldUseRedirect ? 'redirect' : 'popup');
+
   try {
+    // Mobile: Use redirect (no popup blocking issues)
+    if (shouldUseRedirect) {
+      console.log('[Firebase] Using signInWithRedirect for mobile viewport');
+      await signInWithRedirect(auth, googleProvider);
+      // Function returns here - user will be redirected away
+      // Result will be handled by getRedirectResult() on page load
+      return null; // Redirect in progress
+    }
+    
+    // Desktop: Try popup first
+    console.log('[Firebase] Attempting signInWithPopup');
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
 
@@ -116,8 +146,64 @@ export const signInWithGoogle = async () => {
       googleId: user.uid,
       token: await user.getIdToken(),
     };
+    
   } catch (error) {
     console.error('Google sign-in error:', error.code, error.message);
+    
+    // Auto-retry with redirect if popup was blocked
+    if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+      console.warn('[Firebase] Popup blocked, retrying with redirect...');
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return null; // Redirect in progress
+      } catch (redirectError) {
+        console.error('Redirect also failed:', redirectError);
+        throw new Error(getFirebaseErrorMessage(redirectError));
+      }
+    }
+    
+    throw new Error(getFirebaseErrorMessage(error));
+  }
+};
+
+// ── Get Redirect Result (Call on app load) ───────────────────────────
+/**
+ * Check for redirect result after user returns from Google/GitHub OAuth.
+ * Should be called once when the app loads (e.g., in App.jsx or AuthContext).
+ * @returns {Promise<Object|null>} User data if redirect completed, null otherwise
+ */
+export const checkRedirectResult = async () => {
+  if (!firebaseReady || !auth) {
+    return null;
+  }
+
+  try {
+    console.log('[Firebase] Checking for redirect result...');
+    const result = await getRedirectResult(auth);
+    
+    if (!result) {
+      console.log('[Firebase] No redirect result found (normal page load)');
+      return null;
+    }
+    
+    const user = result.user;
+    console.log('[Firebase] ✓ Redirect sign-in successful:', user.email);
+    
+    // Determine provider from result
+    const providerId = result.providerId || result.user.providerData[0]?.providerId;
+    const isGoogle = providerId?.includes('google');
+    
+    return {
+      name: user.displayName || (isGoogle ? 'Google User' : 'GitHub User'),
+      email: user.email,
+      photo: user.photoURL || '',
+      googleId: isGoogle ? user.uid : null,
+      githubId: !isGoogle ? user.uid : null,
+      token: await user.getIdToken(),
+      provider: isGoogle ? 'google' : 'github',
+    };
+  } catch (error) {
+    console.error('[Firebase] Redirect result error:', error.code, error.message);
     throw new Error(getFirebaseErrorMessage(error));
   }
 };
@@ -130,7 +216,21 @@ export const signInWithGithub = async () => {
     );
   }
 
+  // Detect if we should use redirect instead of popup
+  const shouldUseRedirect = isMobileViewport();
+  
+  console.log('[Firebase] GitHub sign-in method:', shouldUseRedirect ? 'redirect' : 'popup');
+
   try {
+    // Mobile: Use redirect
+    if (shouldUseRedirect) {
+      console.log('[Firebase] Using signInWithRedirect for mobile viewport');
+      await signInWithRedirect(auth, githubProvider);
+      return null; // Redirect in progress
+    }
+    
+    // Desktop: Try popup first
+    console.log('[Firebase] Attempting signInWithPopup');
     const result = await signInWithPopup(auth, githubProvider);
     const user = result.user;
 
@@ -141,8 +241,22 @@ export const signInWithGithub = async () => {
       githubId: user.uid,
       token: await user.getIdToken(),
     };
+    
   } catch (error) {
     console.error('GitHub sign-in error:', error.code, error.message);
+    
+    // Auto-retry with redirect if popup was blocked
+    if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+      console.warn('[Firebase] Popup blocked, retrying with redirect...');
+      try {
+        await signInWithRedirect(auth, githubProvider);
+        return null; // Redirect in progress
+      } catch (redirectError) {
+        console.error('Redirect also failed:', redirectError);
+        throw new Error(getFirebaseErrorMessage(redirectError));
+      }
+    }
+    
     throw new Error(getFirebaseErrorMessage(error));
   }
 };

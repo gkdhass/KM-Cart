@@ -4,7 +4,7 @@
  * Purple-themed with sparkle logo, error handling, and social login buttons.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -12,7 +12,7 @@ import {
   FaSpinner, FaExclamationTriangle,
 } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi2';
-import { signInWithGoogle } from '../utils/firebaseConfig';
+import { signInWithGoogle, checkRedirectResult } from '../utils/firebaseConfig';
 import api from '../utils/api';
 
 /**
@@ -47,9 +47,66 @@ function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(''); // 'google' | 'github' | ''
+  const [redirecting, setRedirecting] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // ── Check for OAuth Redirect Result on Page Load ─────────────────
+  useEffect(() => {
+    const handleRedirect = async () => {
+      try {
+        console.log('[Login] Checking for OAuth redirect result...');
+        const redirectUser = await checkRedirectResult();
+        
+        if (!redirectUser) {
+          console.log('[Login] No redirect result found (normal page load)');
+          return;
+        }
+        
+        console.log('[Login] ✓ OAuth redirect successful:', redirectUser.email);
+        setRedirecting(true);
+        setSocialLoading(redirectUser.provider === 'google' ? 'google' : 'github');
+        
+        // Send to backend
+        const endpoint = redirectUser.provider === 'google' ? '/auth/google' : '/auth/github';
+        const payload = redirectUser.provider === 'google' 
+          ? {
+              name: redirectUser.name,
+              email: redirectUser.email,
+              photo: redirectUser.photo,
+              googleId: redirectUser.googleId,
+            }
+          : {
+              name: redirectUser.name,
+              email: redirectUser.email,
+              photo: redirectUser.photo,
+              githubId: redirectUser.githubId,
+            };
+        
+        const res = await api.post(endpoint, payload);
+        
+        if (res.data.success) {
+          const { user: userData, token } = res.data.data;
+          localStorage.setItem('gkcart_token', token);
+          localStorage.setItem('gkcart_user', JSON.stringify(userData));
+          console.log('[Login] ✓ Backend authentication successful, redirecting...');
+          window.location.href = userData.role === 'admin' ? '/admin/dashboard' : '/';
+        } else {
+          setError(res.data.message || 'OAuth login failed.');
+          setRedirecting(false);
+          setSocialLoading('');
+        }
+      } catch (err) {
+        console.error('[Login] Redirect handling error:', err);
+        setError(err.message || 'OAuth sign-in failed. Please try again.');
+        setRedirecting(false);
+        setSocialLoading('');
+      }
+    };
+    
+    handleRedirect();
+  }, []);
 
   // ── Email/Password Login ─────────────────────────────────────────
   const handleSubmit = async (e) => {
@@ -81,12 +138,26 @@ function Login() {
     }
   };
 
-  // ── Google Login ─────────────────────────────────────────────────
+  // ── Google Login (Fixed: Direct call, no setState before Firebase) ────
   const handleGoogleLogin = async () => {
-    setError('');
-    setSocialLoading('google');
+    // ✅ DO NOT call setState before Firebase - it breaks the synchronous gesture chain!
+    // setState will be called after Firebase returns or during redirect
+    
+    setError(''); // Clear previous errors (OK - doesn't break popup)
+    
     try {
       const googleUser = await signInWithGoogle();
+      
+      // If redirect flow, signInWithGoogle returns null and redirects user away
+      if (googleUser === null) {
+        console.log('[Login] Redirect to Google initiated, user will return after auth');
+        setRedirecting(true);
+        return; // User is being redirected, don't continue
+      }
+      
+      // Popup flow returned successfully
+      setSocialLoading('google'); // Now safe to set loading state
+      
       const res = await api.post('/auth/google', {
         name: googleUser.name,
         email: googleUser.email,
@@ -101,17 +172,17 @@ function Login() {
         window.location.href = userData.role === 'admin' ? '/admin/dashboard' : '/';
       } else {
         setError(res.data.message || 'Google login failed.');
+        setSocialLoading('');
       }
     } catch (err) {
       const friendlyMsg = getFirebaseErrorMsg(err.code);
       setError(friendlyMsg || err.message || 'Google login failed.');
-    } finally {
       setSocialLoading('');
     }
   };
 
 
-  const anyLoading = isLoading || !!socialLoading;
+  const anyLoading = isLoading || !!socialLoading || redirecting;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50 px-4 py-10">
