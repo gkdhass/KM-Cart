@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 /** JWT token expiration time */
 const JWT_EXPIRES_IN = '7d';
@@ -220,17 +221,23 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    // For now: log the reset link (production: send via Nodemailer)
+    // Construct reset URL
     const resetURL = (process.env.CLIENT_URL || 'http://localhost:5173') + '/reset-password/' + resetToken;
-    console.log('Password reset link (dev):', resetURL);
 
-    // TODO: Replace console.log with actual email sending:
-    // await sendPasswordResetEmail(user.email, resetURL);
+    // Attempt to send email (don't expose errors to user for anti-enumeration)
+    try {
+      await sendPasswordResetEmail(user.email, resetURL);
+      console.log(`✅ Password reset email sent successfully to ${user.email}`);
+    } catch (emailError) {
+      // Log the error server-side but don't expose it to the user
+      console.error('❌ Failed to send password reset email:', emailError.message);
+      // Continue and return success to maintain anti-enumeration
+    }
 
     return res.status(200).json({
       success: true,
       message: 'If this email exists, a reset link has been sent.',
-      // Only in development — remove in production:
+      // Only in development — include reset URL for testing:
       ...(process.env.NODE_ENV === 'development' && { devResetUrl: resetURL }),
     });
   } catch (error) {
