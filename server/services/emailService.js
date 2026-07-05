@@ -12,8 +12,25 @@
 
 const { Resend } = require('resend');
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-initialize Resend client to avoid crashes when API key is not set
+let resendClient = null;
+
+/**
+ * Get or create Resend client instance (lazy initialization)
+ * @returns {Resend} Resend client instance
+ * @throws {Error} If RESEND_API_KEY is not configured
+ */
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not configured in environment variables');
+  }
+  
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  
+  return resendClient;
+}
 
 /**
  * Send password reset email with reset link
@@ -28,9 +45,8 @@ async function sendPasswordResetEmail(toEmail, resetURL) {
       throw new Error('Email address and reset URL are required');
     }
 
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is not configured in environment variables');
-    }
+    // Get Resend client (lazy initialization - only crashes if actually used)
+    const resend = getResendClient();
 
     // Send email via Resend
     const { data, error } = await resend.emails.send({
