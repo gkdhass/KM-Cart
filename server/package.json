@@ -2,7 +2,7 @@
   "name": "gkcart-server",
   "version": "1.0.0",
   "description": "G_K_Cart AI Shopping Assistant - Backend API",
-  "main": "server.js",
+  "main": "api/index.js",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -10,7 +10,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node seed/seedData.js",
-    "render-start": "node server.js"
+    "render-start": "node server.js",
+    "vercel-build": "echo 'No build step required for serverless'"
   },
   "keywords": [
     "ecommerce",

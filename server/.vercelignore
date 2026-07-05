@@ -1,0 +1,41 @@
+# Development files
+node_modules
+.env
+.env.local
+.env.example
+
+# Test and seed files
+seed/
+test-*.js
+*-test.js
+*.test.js
+diagnose-*.js
+check-*.js
+
+# Images and media (test files)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Documentation
+*.md
+!README.md
+
+# Development server file
+server.js
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db

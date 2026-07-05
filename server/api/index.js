@@ -15,9 +15,11 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
 
 // Load .env for local testing (Vercel ignores this in production)
-dotenv.config();
+// Adjust path to point to parent directory where .env is located
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // ─────────────────────────────────────────────────────────────────────
 // Import route modules (relative to server/ directory)
@@ -36,19 +38,44 @@ const categoryRoutes = require('../routes/categoryRoutes');
 const app = express();
 
 // ── CORS Configuration ──────────────────────────────────────────────
-// Allow all origins — Vercel headers in vercel.json handle CORS at
-// the infrastructure level. Express just needs to not block anything.
-// This avoids origin mismatch issues between different Vercel subdomains
-// (e.g., kmcart.vercel.app vs km-cart.vercel.app).
-app.use(cors({
-  origin: true, // Reflect the request origin (allows any origin)
+// Production-ready CORS setup for Vercel
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((url) => url.trim())
+  : [];
+
+// Development fallback
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173', 'http://localhost:3000');
+}
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, health checks)
+    if (!origin) return callback(null, true);
+    
+    // Allow any origin in production if CLIENT_URL not set (temporary)
+    if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+      return callback(null, true);
+    }
+    
+    // Check against whitelist
+    if (allowedOrigins.includes(origin) || origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    console.warn(`⚠️ CORS blocked: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // Handle OPTIONS preflight explicitly — CRITICAL for Vercel serverless
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // ── Body Parsers ────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -66,7 +93,8 @@ let cachedConnection = null;
 const connectDB = async () => {
   // Return early if already connected
   if (cachedConnection && mongoose.connection.readyState === 1) {
-    return;
+    console.log('✅ Using cached MongoDB connection');
+    return cachedConnection;
   }
 
   // Verify the env var exists before attempting connection
@@ -78,15 +106,33 @@ const connectDB = async () => {
   }
 
   try {
+    // Mongoose connection options optimized for serverless
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      // CRITICAL: Don't buffer commands during connection
       bufferCommands: false,
+      
+      // Connection pool settings (smaller for serverless)
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000,
+      minPoolSize: 1,
+      
+      // Timeout settings for serverless (faster failures)
+      serverSelectionTimeoutMS: 10000, // 10 seconds
       socketTimeoutMS: 45000,
+      
+      // Connection management
+      connectTimeoutMS: 10000,
+      heartbeatFrequencyMS: 10000,
+      
+      // Automatically retry initial connection
+      retryWrites: true,
+      retryReads: true,
     });
 
     cachedConnection = conn;
     console.log('✅ MongoDB Connected:', conn.connection.host);
+    console.log('📦 Database:', conn.connection.name);
+    
+    return conn;
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
     cachedConnection = null;
@@ -208,31 +254,41 @@ app.use((err, req, res, next) => {
 
 module.exports = async (req, res) => {
   try {
+    // Set serverless-specific headers
+    res.setHeader('X-Powered-By', 'Vercel');
+    
     // Skip DB connection for basic health checks and root endpoint
-    if ((req.url === '/api' || req.url === '/') && req.method === 'GET') {
-      return app(req, res);
-    }
-
+    const skipDBRoutes = ['/', '/api', '/api/health'];
+    const isHealthCheck = skipDBRoutes.includes(req.url) && req.method === 'GET';
+    
     // Skip DB connection for OPTIONS preflight
-    if (req.method === 'OPTIONS') {
-      return app(req, res);
-    }
+    const isPreflight = req.method === 'OPTIONS';
 
-    await connectDB();
+    // Connect to MongoDB for all other requests
+    if (!isHealthCheck && !isPreflight) {
+      await connectDB();
+    }
+    
+    // Delegate request to Express app
     return app(req, res);
+    
   } catch (error) {
     console.error('❌ Serverless handler error:', error.message);
     console.error('Stack:', error.stack);
 
     // Return detailed error for debugging
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Server initialization failed. Please try again.',
-      error: error.message,
+      error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
       hint: getErrorHint(error.message),
+      timestamp: new Date().toISOString()
     });
   }
 };
+
+// Also export the app for local testing
+module.exports.app = app;
 
 /**
  * Returns a human-readable hint based on common error patterns.
