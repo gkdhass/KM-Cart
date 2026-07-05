@@ -252,7 +252,7 @@ const handleChat = async (req, res) => {
  * @route   POST /api/chatbot/voice-order
  * @access  Public
  * @body    { items: [{ rawText, productName, quantity, unit, priceHint }] }
- * @returns { results: [{ status, product?, candidates?, query, inputIndex }] }
+ * @returns { results: [{ status, product, query, inputIndex }], total, summary }
  */
 const handleVoiceOrder = async (req, res) => {
   try {
@@ -263,7 +263,8 @@ const handleVoiceOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid request: items array required',
-        results: []
+        results: [],
+        total: 0
       });
     }
 
@@ -271,9 +272,12 @@ const handleVoiceOrder = async (req, res) => {
       return res.json({
         success: true,
         message: 'No items to process',
-        results: []
+        results: [],
+        total: 0
       });
     }
+
+    console.log(`[VoiceOrder] Processing ${items.length} items...`);
 
     // Process each item through matchProduct
     const results = await Promise.all(
@@ -286,6 +290,27 @@ const handleVoiceOrder = async (req, res) => {
             quantity: item.quantity,
             brand: null // Could extract brand from productName if needed
           });
+
+          // Auto-select best match for ambiguous results
+          if (matchResult.status === 'ambiguous' && matchResult.candidates?.length > 0) {
+            console.log(`[VoiceOrder] Auto-selecting best match for "${item.productName}" from ${matchResult.candidates.length} candidates`);
+            
+            // Select highest-scored candidate (they're already sorted by score)
+            const bestCandidate = matchResult.candidates[0];
+            
+            return {
+              status: 'matched',
+              product: bestCandidate.product,
+              score: bestCandidate.score,
+              autoSelected: true,
+              inputIndex: index,
+              rawText: item.rawText,
+              requestedQuantity: item.quantity,
+              requestedUnit: item.unit,
+              priceHint: item.priceHint || null,
+              query: matchResult.query
+            };
+          }
 
           // Add input metadata for frontend correlation
           return {
@@ -320,11 +345,23 @@ const handleVoiceOrder = async (req, res) => {
       notFound: results.filter(r => r.status === 'notFound').length
     };
 
+    // Calculate total bill (sum of matched items only)
+    const totalPrice = results
+      .filter(r => r.status === 'matched' && r.product)
+      .reduce((sum, item) => {
+        const itemPrice = item.product.price * item.requestedQuantity;
+        return sum + itemPrice;
+      }, 0);
+
+    console.log(`[VoiceOrder] ✓ Processed: ${summary.matched} matched, ${summary.ambiguous} ambiguous, ${summary.notFound} not found | Total: ₹${totalPrice}`);
+
     return res.json({
       success: true,
       message: `Processed ${summary.total} items: ${summary.matched} matched, ${summary.ambiguous} ambiguous, ${summary.notFound} not found`,
       results,
-      summary
+      summary,
+      total: totalPrice,
+      currency: '₹'
     });
 
   } catch (error) {
@@ -333,6 +370,7 @@ const handleVoiceOrder = async (req, res) => {
       success: false,
       message: 'Failed to process voice order',
       results: [],
+      total: 0,
       error: error.message
     });
   }
