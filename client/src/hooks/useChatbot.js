@@ -289,9 +289,10 @@ export function useChatbot() {
           items: parsed.items,
         });
 
-        const { results, summary } = response.data;
+        const { results, summary, total: backendTotal, currency } = response.data;
         console.log('[VoiceOrder Frontend] Results:', results);
         console.log('[VoiceOrder Frontend] Summary:', summary);
+        console.log('[VoiceOrder Frontend] Backend calculated total:', backendTotal);
 
         // Process results
         let addedCount = 0;
@@ -316,24 +317,36 @@ export function useChatbot() {
         let responseContent = '**Voice Order Results**\n\n';
 
         if (addedCount > 0) {
-          responseContent += `**Added to cart:** ${addedCount} item(s)\n`;
+          responseContent += `**✓ Added to cart:** ${addedCount} item(s)\n`;
+          
+          // Show individual item details
+          const matchedItems = results.filter(r => r.status === 'matched');
+          matchedItems.forEach((item) => {
+            const itemTotal = item.product.price * item.requestedQuantity;
+            responseContent += `  • ${item.product.name} × ${item.requestedQuantity} = ${currency || '₹'}${item.product.price} × ${item.requestedQuantity} = ${currency || '₹'}${itemTotal}\n`;
+          });
         }
 
         if (ambiguousItems.length > 0) {
-          responseContent += `\n**Ambiguous (${ambiguousItems.length}):**\n`;
+          responseContent += `\n**⚠ Ambiguous (${ambiguousItems.length}):**\n`;
           ambiguousItems.forEach((item) => {
-            responseContent += `• "${item.rawText}" - Multiple matches found\n`;
+            responseContent += `  • "${item.rawText}" - Multiple matches found\n`;
           });
         }
 
         if (notFoundItems.length > 0) {
-          responseContent += `\n**Not found (${notFoundItems.length}):**\n`;
+          responseContent += `\n**✗ Not found (${notFoundItems.length}):**\n`;
           notFoundItems.forEach((item) => {
-            responseContent += `• "${item.rawText}"\n`;
+            responseContent += `  • "${item.rawText}"\n`;
           });
         }
 
-        responseContent += `\n**Cart Total:** ₹${cartTotal.toFixed(2)}`;
+        // CRITICAL FIX: Use backend-calculated total instead of stale cartTotal
+        // Backend calculates: price × quantity for each matched item
+        // Frontend cartTotal may be stale due to React state batching
+        if (addedCount > 0 && typeof backendTotal === 'number') {
+          responseContent += `\n**Order Total:** ${currency || '₹'}${backendTotal.toFixed(2)}`;
+        }
 
         const botMessage = {
           id: generateId(),
