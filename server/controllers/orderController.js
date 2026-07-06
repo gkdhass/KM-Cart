@@ -66,22 +66,56 @@ const placeOrder = async (req, res) => {
     }
 
     // ── Verify stock for all items ────────────────────────────────────
+    const unavailableItems = [];
+    const outOfStockItems = [];
+    const deactivatedItems = [];
+    
     for (const item of cartItems) {
       const product = await Product.findById(item.productId);
 
+      // Product deleted from database
       if (!product) {
-        return res.status(400).json({
-          success: false,
-          message: `Product "${item.name}" is no longer available.`,
+        unavailableItems.push({
+          productId: item.productId,
+          name: item.name,
+          reason: 'deleted'
         });
+        continue;
       }
 
-      if (product.stock < item.qty) {
-        return res.status(400).json({
-          success: false,
-          message: `Only ${product.stock} unit(s) of "${item.name}" available. You requested ${item.qty}.`,
+      // Product deactivated (isActive = false)
+      if (product.isActive === false) {
+        deactivatedItems.push({
+          productId: item.productId,
+          name: item.name,
+          reason: 'deactivated'
         });
+        continue;
       }
+
+      // Insufficient stock
+      if (product.stock < item.qty) {
+        outOfStockItems.push({
+          productId: item.productId,
+          name: item.name,
+          availableStock: product.stock,
+          requestedQty: item.qty,
+          reason: 'insufficient_stock'
+        });
+        continue;
+      }
+    }
+
+    // Return detailed error with all problematic items
+    if (unavailableItems.length > 0 || outOfStockItems.length > 0 || deactivatedItems.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Some items in your cart are no longer available. Please review and update your cart.',
+        unavailableItems,
+        outOfStockItems,
+        deactivatedItems,
+        errorType: 'cart_validation_failed'
+      });
     }
 
     // ── Generate unique order ID ──────────────────────────────────────

@@ -41,7 +41,7 @@ const PAYMENT_OPTIONS = [
  */
 function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, clearCart, removeFromCart } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   // ── Form state ──────────────────────────────────────────────────────
@@ -224,8 +224,61 @@ function Checkout() {
         }
       } catch (err) {
         console.error('COD Order error:', err.response?.data || err.message);
-        const msg = err.response?.data?.message || 'Failed to place order. Please try again.';
-        setError(msg);
+        
+        // Handle cart validation errors with detailed item information
+        if (err.response?.data?.errorType === 'cart_validation_failed') {
+          const { unavailableItems, outOfStockItems, deactivatedItems } = err.response.data;
+          
+          // Auto-remove unavailable items from cart
+          const itemsToRemove = [
+            ...(unavailableItems || []),
+            ...(deactivatedItems || [])
+          ];
+          
+          if (itemsToRemove.length > 0) {
+            console.log('[Checkout] Auto-removing unavailable items:', itemsToRemove);
+            itemsToRemove.forEach(item => {
+              removeFromCart(item.productId);
+            });
+          }
+          
+          // Build detailed error message
+          let errorMsg = 'Cart Updated:\n\n';
+          
+          if (unavailableItems?.length > 0) {
+            errorMsg += '❌ Removed (no longer available):\n';
+            unavailableItems.forEach(item => {
+              errorMsg += `  • ${item.name}\n`;
+            });
+            errorMsg += '\n';
+          }
+          
+          if (deactivatedItems?.length > 0) {
+            errorMsg += '⚠️ Removed (currently unavailable):\n';
+            deactivatedItems.forEach(item => {
+              errorMsg += `  • ${item.name}\n`;
+            });
+            errorMsg += '\n';
+          }
+          
+          if (outOfStockItems?.length > 0) {
+            errorMsg += '📦 Insufficient stock:\n';
+            outOfStockItems.forEach(item => {
+              errorMsg += `  • ${item.name}: Only ${item.availableStock} available (you have ${item.requestedQty} in cart)\n`;
+            });
+            errorMsg += '\n';
+          }
+          
+          errorMsg += 'Please review your updated cart and try again.';
+          setError(errorMsg);
+          
+          // Scroll to top to show error
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          // Generic error handling
+          const msg = err.response?.data?.message || 'Failed to place order. Please try again.';
+          setError(msg);
+        }
       } finally {
         setLoading(false);
       }
