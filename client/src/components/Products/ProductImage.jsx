@@ -19,9 +19,11 @@ function ProductImage({ src, alt, name, className = '' }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
-  const fallbackUrl = `https://placehold.co/300x300/16A34A/FFFFFF?text=${encodeURIComponent(name || alt || 'Product')}`;
+  // Use a simple colored placeholder with product initial
+  const productInitial = (name || alt || 'P').charAt(0).toUpperCase();
+  const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(productInitial)}&size=300&background=7C8BF2&color=fff&bold=true&format=svg`;
 
-  // Determine the final src to use
+  // Determine the final src to use: use provided src, or fallback if empty/error
   const imgSrc = error ? fallbackUrl : (src || fallbackUrl);
 
   return (

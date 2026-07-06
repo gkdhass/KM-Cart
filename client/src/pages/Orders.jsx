@@ -215,13 +215,14 @@ function Orders() {
         {/* Order Cards */}
         {!loading && orders.length > 0 && (
           <div className="space-y-4">
-            {orders.map((order) => (
+            {orders.map((order, index) => (
               <OrderCard
                 key={order._id}
                 order={order}
                 formatDate={formatDate}
                 formatPrice={formatPrice}
                 onBuyAgain={handleBuyAgain}
+                index={index}
               />
             ))}
 
@@ -262,7 +263,7 @@ function Orders() {
  * @param {Function} props.onBuyAgain - Buy again callback
  * @returns {JSX.Element} Order card
  */
-function OrderCard({ order, formatDate, formatPrice, onBuyAgain }) {
+function OrderCard({ order, formatDate, formatPrice, onBuyAgain, index }) {
   const statusStyle = STATUS_STYLES[order.status] || STATUS_STYLES.Pending;
   const timelineStep = getTimelineStep(order.status);
   const maxItemsToShow = 3;
@@ -270,7 +271,8 @@ function OrderCard({ order, formatDate, formatPrice, onBuyAgain }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden
-                    hover:shadow-md transition-shadow duration-200">
+                    hover:shadow-md transition-shadow duration-200 animate-card-entrance"
+         style={{ animationDelay: `${index * 100}ms` }}>
       {/* Top Row: Order ID, Date, Status */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-b border-gray-50">
         <div className="flex items-center gap-3">
@@ -278,7 +280,8 @@ function OrderCard({ order, formatDate, formatPrice, onBuyAgain }) {
           <span className="text-xs text-gray-400">Placed on {formatDate(order.createdAt)}</span>
         </div>
         <span className={`px-3 py-1 text-xs font-semibold rounded-full border
-                         ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                         ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}
+                         ${order.status === 'Pending' ? 'animate-status-pulse' : ''}`}>
           {order.status}
         </span>
       </div>

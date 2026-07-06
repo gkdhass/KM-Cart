@@ -103,7 +103,7 @@ let cachedConnection = null;
 const connectDB = async () => {
   // Return early if already connected
   if (cachedConnection && mongoose.connection.readyState === 1) {
-    console.log('✅ Using cached MongoDB connection');
+    console.log('[DB] Using cached MongoDB connection');
     return cachedConnection;
   }
 
@@ -139,12 +139,12 @@ const connectDB = async () => {
     });
 
     cachedConnection = conn;
-    console.log('✅ MongoDB Connected:', conn.connection.host);
-    console.log('📦 Database:', conn.connection.name);
+    console.log('[DB] MongoDB Connected:', conn.connection.host);
+    console.log('[DB] Database:', conn.connection.name);
     
     return conn;
   } catch (error) {
-    console.error('❌ MongoDB Connection Failed:', error.message);
+    console.error('[DB ERROR] MongoDB Connection Failed:', error.message);
     cachedConnection = null;
     throw error;
   }
@@ -161,7 +161,7 @@ const connectDB = async () => {
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: "KM Cart API is running 🚀",
+    message: "KM Cart API is running",
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: {
@@ -184,7 +184,7 @@ app.get('/', (req, res) => {
 app.get('/api', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'K_M_Cart API is running on Vercel! 🚀',
+    message: 'K_M_Cart API is running on Vercel!',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production',

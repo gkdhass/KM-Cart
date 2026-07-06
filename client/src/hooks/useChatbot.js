@@ -27,7 +27,7 @@ const WELCOME_MESSAGE = {
   role: 'bot',
   type: 'text',
   content:
-    "👋 Hi there! I'm your **K_M_Cart AI Assistant**!\n\nI can help you with:\n🛍️ Finding products\n📦 Tracking orders\n❓ Answering questions\n\nTry the quick options below or type anything!",
+    "Hi there! I'm your **K_M_Cart AI Assistant**!\n\nI can help you with:\n- Finding products\n- Tracking orders\n- Answering questions\n\nTry the quick options below or type anything!",
   timestamp: new Date(),
   showQuickReplies: true,
 };
@@ -313,27 +313,27 @@ export function useChatbot() {
         // Build response message
         await new Promise((resolve) => setTimeout(resolve, 800));
 
-        let responseContent = '🎤 **Voice Order Results**\n\n';
+        let responseContent = '**Voice Order Results**\n\n';
 
         if (addedCount > 0) {
-          responseContent += `✅ **Added to cart:** ${addedCount} item(s)\n`;
+          responseContent += `**Added to cart:** ${addedCount} item(s)\n`;
         }
 
         if (ambiguousItems.length > 0) {
-          responseContent += `\n❓ **Ambiguous (${ambiguousItems.length}):**\n`;
+          responseContent += `\n**Ambiguous (${ambiguousItems.length}):**\n`;
           ambiguousItems.forEach((item) => {
             responseContent += `• "${item.rawText}" - Multiple matches found\n`;
           });
         }
 
         if (notFoundItems.length > 0) {
-          responseContent += `\n❌ **Not found (${notFoundItems.length}):**\n`;
+          responseContent += `\n**Not found (${notFoundItems.length}):**\n`;
           notFoundItems.forEach((item) => {
             responseContent += `• "${item.rawText}"\n`;
           });
         }
 
-        responseContent += `\n💰 **Cart Total:** ₹${cartTotal.toFixed(2)}`;
+        responseContent += `\n**Cart Total:** ₹${cartTotal.toFixed(2)}`;
 
         const botMessage = {
           id: generateId(),
@@ -408,7 +408,7 @@ export function useChatbot() {
             id: generateId(),
             role: 'bot',
             type: 'text',
-            content: `😓 ${results.error || 'Failed to process the image. Please try again.'}`,
+            content: `${results.error || 'Failed to process the image. Please try again.'}`,
             timestamp: new Date(),
             isError: true,
           };
@@ -418,18 +418,18 @@ export function useChatbot() {
         }
 
         // Format bot response with OCR results
-        let content = '📸 **Image Search Results**\n\n';
+        let content = '**Image Search Results**\n\n';
 
         if (results.extractedText) {
-          content += `📝 **Detected Text:** ${results.extractedText}\n\n`;
+          content += `**Detected Text:** ${results.extractedText}\n\n`;
         }
 
         if (results.brands?.length > 0) {
-          content += `🏷️ **Brands Found:** ${results.brands.join(', ')}\n\n`;
+          content += `**Brands Found:** ${results.brands.join(', ')}\n\n`;
         }
 
         if (results.products?.length > 0) {
-          content += `✅ **Matching Products:** ${results.products.length} found\n\n`;
+          content += `**Matching Products:** ${results.products.length} found\n\n`;
           content += 'Click on any product below to view details!';
 
           const botMessage = {
@@ -442,7 +442,7 @@ export function useChatbot() {
           };
           setMessages((prev) => [...prev, botMessage]);
         } else {
-          content += '❌ No matching products found in our catalog.\n\n';
+          content += 'No matching products found in our catalog.\n\n';
           content += 'Try uploading a clearer image or search by typing the product name!';
 
           const botMessage = {

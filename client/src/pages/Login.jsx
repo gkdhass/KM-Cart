@@ -140,7 +140,7 @@ function Login() {
 
   // ── Google Login (Fixed: Direct call, no setState before Firebase) ────
   const handleGoogleLogin = async () => {
-    // ✅ DO NOT call setState before Firebase - it breaks the synchronous gesture chain!
+    // DO NOT call setState before Firebase - it breaks the synchronous gesture chain!
     // setState will be called after Firebase returns or during redirect
     
     setError(''); // Clear previous errors (OK - doesn't break popup)

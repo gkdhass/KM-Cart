@@ -56,6 +56,15 @@ export default {
         'slide-up': 'slideUp 0.25s ease-out',
         'scale-in': 'scaleIn 0.25s ease-out',
         'pulse-ring': 'pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        // Unique page animations
+        'hero-fade': 'heroFade 0.8s ease-out',
+        'hero-slide': 'heroSlide 1s ease-out',
+        'stagger-card': 'staggerCard 0.5s ease-out',
+        'zoom-in': 'zoomIn 0.4s ease-out',
+        'slide-in-right': 'slideInRight 0.4s ease-out',
+        'card-entrance': 'cardEntrance 0.5s ease-out',
+        'status-pulse': 'statusPulse 2s ease-in-out infinite',
+        'spin-slow': 'spinSlow 1.5s linear infinite',
       },
       keyframes: {
         bounceDot: {
@@ -78,6 +87,39 @@ export default {
           '0%': { transform: 'scale(1)', opacity: '0.3' },
           '50%': { transform: 'scale(1.15)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '0.3' },
+        },
+        // Unique page animation keyframes
+        heroFade: {
+          '0%': { opacity: '0', transform: 'translateY(-30px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        heroSlide: {
+          '0%': { opacity: '0', transform: 'translateX(-50px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        staggerCard: {
+          '0%': { opacity: '0', transform: 'translateY(30px) scale(0.9)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        zoomIn: {
+          '0%': { opacity: '0', transform: 'scale(0.8)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        slideInRight: {
+          '0%': { opacity: '0', transform: 'translateX(30px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        cardEntrance: {
+          '0%': { opacity: '0', transform: 'translateY(20px) rotateX(-10deg)' },
+          '100%': { opacity: '1', transform: 'translateY(0) rotateX(0)' },
+        },
+        statusPulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
+        spinSlow: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
         },
       },
       backdropBlur: {

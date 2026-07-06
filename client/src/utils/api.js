@@ -92,10 +92,10 @@ api.interceptors.response.use(
       }
     } else if (error.code === 'ECONNABORTED') {
       // Timeout error
-      console.error('⏱️ API request timed out. The server may be starting up (cold start).');
+      console.error('API request timed out. The server may be starting up (cold start).');
     } else if (error.request) {
       // Request made but no response (network error)
-      console.error('🌐 Network error — no response received. Check your internet connection.');
+      console.error('Network error — no response received. Check your internet connection.');
     }
 
     return Promise.reject(error);

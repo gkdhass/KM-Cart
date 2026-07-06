@@ -227,10 +227,10 @@ const forgotPassword = async (req, res) => {
     // Attempt to send email (don't expose errors to user for anti-enumeration)
     try {
       await sendPasswordResetEmail(user.email, resetURL);
-      console.log(`✅ Password reset email sent successfully to ${user.email}`);
+      console.log(`[AUTH] Password reset email sent successfully to ${user.email}`);
     } catch (emailError) {
       // Log the error server-side but don't expose it to the user
-      console.error('❌ Failed to send password reset email:', emailError.message);
+      console.error('[AUTH] Failed to send password reset email:', emailError.message);
       // Continue and return success to maintain anti-enumeration
     }
 
@@ -246,6 +246,65 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * @route   POST /api/auth/reset-password/:token
+ * @desc    Reset password using token from email
+ * @access  Public
+ *
+ * @param {String} req.params.token - Reset token from email link
+ * @param {String} req.body.password - New password
+ * @returns {Object} { success, message }
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    // Validate inputs
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    // Hash the token to match the stored hash
+    const resetTokenHash = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with valid, non-expired token
+    const user = await User.findOne({
+      resetPasswordToken: resetTokenHash,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token. Please request a new password reset.',
+      });
+    }
+
+    // Update password (will be hashed by pre-save hook)
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    console.log(`[AUTH] Password reset successful for user: ${user.email}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successful! You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+};
 
 
 /**
@@ -445,6 +504,6 @@ const githubLogin = async (req, res) => {
   }
 };
 
-module.exports = { register, login, forgotPassword, getMe, updateProfile, changePassword, googleLogin, githubLogin };
+module.exports = { register, login, forgotPassword, resetPassword, getMe, updateProfile, changePassword, googleLogin, githubLogin };
 
 

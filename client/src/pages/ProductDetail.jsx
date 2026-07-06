@@ -334,7 +334,7 @@ function ProductDetail() {
       });
 
       if (res.data.success) {
-        setReviewSuccess('Review submitted successfully! 🎉');
+        setReviewSuccess('Review submitted successfully!');
         setReviewRating(0);
         setReviewComment('');
         setReviewImages([]);
@@ -464,7 +464,7 @@ function ProductDetail() {
             <div
               ref={imgRef}
               className="relative aspect-square bg-white rounded-2xl border border-gray-100
-                         overflow-hidden shadow-sm cursor-crosshair group"
+                         overflow-hidden shadow-sm cursor-crosshair group animate-zoom-in"
               onMouseEnter={() => setZoomed(true)}
               onMouseLeave={() => setZoomed(false)}
               onMouseMove={handleMouseMove}
@@ -493,7 +493,7 @@ function ProductDetail() {
               {/* Zoom hint */}
               <div className="absolute bottom-4 right-4 bg-black/50 text-white text-xs px-3 py-1.5
                               rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                🔍 Hover to zoom
+                Hover to zoom
               </div>
             </div>
 

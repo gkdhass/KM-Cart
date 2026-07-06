@@ -104,14 +104,14 @@ const testCases = [
 
 // Run tests
 export function runVoiceParserTests() {
-  console.log('🧪 Running Voice Parser Tests\n');
+  console.log('Running Voice Parser Tests\n');
   console.log('='.repeat(60));
 
   let passed = 0;
   let failed = 0;
 
   testCases.forEach((test, index) => {
-    console.log(`\n📝 Test ${index + 1}: ${test.name}`);
+    console.log(`\nTest ${index + 1}: ${test.name}`);
     console.log(`Input: "${test.input}"`);
 
     const result = parseShoppingList(test.input);
@@ -125,19 +125,19 @@ export function runVoiceParserTests() {
 
     if (test.expected.itemCount !== undefined) {
       if (result.items.length !== test.expected.itemCount) {
-        console.log(`  ❌ Expected ${test.expected.itemCount} items, got ${result.items.length}`);
+        console.log(`  X Expected ${test.expected.itemCount} items, got ${result.items.length}`);
         testPassed = false;
       } else {
-        console.log(`  ✅ Item count matches: ${result.items.length}`);
+        console.log(`  OK Item count matches: ${result.items.length}`);
       }
     }
 
     if (test.expected.commandCount !== undefined) {
       if (result.commands.length !== test.expected.commandCount) {
-        console.log(`  ❌ Expected ${test.expected.commandCount} commands, got ${result.commands.length}`);
+        console.log(`  X Expected ${test.expected.commandCount} commands, got ${result.commands.length}`);
         testPassed = false;
       } else {
-        console.log(`  ✅ Command count matches: ${result.commands.length}`);
+        console.log(`  OK Command count matches: ${result.commands.length}`);
       }
     }
 
@@ -161,10 +161,10 @@ export function runVoiceParserTests() {
     }
 
     if (testPassed) {
-      console.log(`\n✅ Test ${index + 1} PASSED`);
+      console.log(`\nOK Test ${index + 1} PASSED`);
       passed++;
     } else {
-      console.log(`\n❌ Test ${index + 1} FAILED`);
+      console.log(`\nX Test ${index + 1} FAILED`);
       failed++;
     }
 
@@ -172,12 +172,12 @@ export function runVoiceParserTests() {
   });
 
   console.log('\n' + '='.repeat(60));
-  console.log(`\n📊 Test Results: ${passed} passed, ${failed} failed out of ${testCases.length} tests`);
+  console.log(`\nTest Results: ${passed} passed, ${failed} failed out of ${testCases.length} tests`);
   console.log('='.repeat(60) + '\n');
 }
 
 // Export for use in browser console or Node.js
 if (typeof window !== 'undefined') {
   window.runVoiceParserTests = runVoiceParserTests;
-  console.log('💡 Run tests in console: runVoiceParserTests()');
+  console.log('Run tests in console: runVoiceParserTests()');
 }

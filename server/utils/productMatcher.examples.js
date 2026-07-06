@@ -134,13 +134,13 @@ async function example6_VoiceOrdering() {
   console.log(`Match Status: ${result.status}`);
   
   if (result.status === 'matched') {
-    console.log(`✅ Adding to cart:`);
+    console.log(`Adding to cart:`);
     console.log(`   Product: ${result.product.name}`);
     console.log(`   Quantity: ${result.quantity}`);
     console.log(`   Price per unit: ₹${result.product.price}`);
     console.log(`   Total: ₹${result.product.price * result.quantity}`);
   } else if (result.status === 'ambiguous') {
-    console.log('❓ Need clarification from user:');
+    console.log('Need clarification from user:');
     result.candidates.forEach((c, i) => {
       console.log(`   ${i + 1}. ${c.product.name}`);
     });

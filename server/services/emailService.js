@@ -45,6 +45,10 @@ async function sendPasswordResetEmail(toEmail, resetURL) {
       throw new Error('Email address and reset URL are required');
     }
 
+    // Log environment configuration for debugging
+    console.log('[EMAIL CONFIG] RESEND_API_KEY set:', !!process.env.RESEND_API_KEY);
+    console.log('[EMAIL CONFIG] EMAIL_FROM:', process.env.EMAIL_FROM || 'using default (onboarding@resend.dev)');
+
     // Get Resend client (lazy initialization - only crashes if actually used)
     const resend = getResendClient();
 
@@ -58,11 +62,16 @@ async function sendPasswordResetEmail(toEmail, resetURL) {
     });
 
     if (error) {
-      console.error('❌ Resend API error:', error);
+      console.error('[EMAIL ERROR] Resend API error:', JSON.stringify(error, null, 2));
+      console.error('[EMAIL ERROR] Error details:', {
+        name: error.name,
+        message: error.message,
+        statusCode: error.statusCode
+      });
       throw new Error(`Failed to send email: ${error.message}`);
     }
 
-    console.log('✅ Password reset email sent:', { 
+    console.log('[EMAIL SUCCESS] Password reset email sent:', { 
       to: toEmail, 
       messageId: data?.id,
       timestamp: new Date().toISOString() 
@@ -71,7 +80,8 @@ async function sendPasswordResetEmail(toEmail, resetURL) {
     return { success: true, messageId: data?.id };
 
   } catch (error) {
-    console.error('❌ Email service error:', error.message);
+    console.error('[EMAIL ERROR] Email service error:', error.message);
+    console.error('[EMAIL ERROR] Full error:', error);
     throw error;
   }
 }
@@ -179,7 +189,7 @@ function getPasswordResetEmailHTML(resetURL) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>🔐 Reset Your Password</h1>
+      <h1>Reset Your Password</h1>
     </div>
     <div class="content">
       <h2>Hello!</h2>
@@ -192,7 +202,7 @@ function getPasswordResetEmailHTML(resetURL) {
       </div>
       <div class="info-box">
         <p>
-          <strong>⏱️ This link will expire in 15 minutes</strong> for security reasons.
+          <strong>This link will expire in 15 minutes</strong> for security reasons.
           If you didn't request this, you can safely ignore this email.
         </p>
       </div>
@@ -230,7 +240,7 @@ Click the link below to reset it:
 
 ${resetURL}
 
-⏱️ This link will expire in 15 minutes for security reasons.
+This link will expire in 15 minutes for security reasons.
 
 If you didn't request this password reset, you can safely ignore this email.
 Your password will remain unchanged.

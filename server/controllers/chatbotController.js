@@ -223,7 +223,7 @@ const handleChat = async (req, res) => {
     if (intent.type === 'greeting') {
       return res.json({
         type: 'text',
-        message: 'Hello! Welcome to K_M_Cart! Here is what I can do:\n\n🔍 Find products: "Show coconut oil under ₹200"\n📦 Track orders: "Track my order ORD-2024-0001"\n⭐ Filter by rating: "Basmati rice above 4 stars"\n❓ Answer questions: "What is your return policy?"\n\nWhat are you looking for today?',
+        message: 'Hello! Welcome to K_M_Cart! Here is what I can do:\n\n- Find products: "Show coconut oil under ₹200"\n- Track orders: "Track my order ORD-2024-0001"\n- Filter by rating: "Basmati rice above 4 stars"\n- Answer questions: "What is your return policy?"\n\nWhat are you looking for today?',
         data: null
       });
     }

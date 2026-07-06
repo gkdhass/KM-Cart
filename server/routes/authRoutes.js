@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const {
-  register, login, forgotPassword,
+  register, login, forgotPassword, resetPassword,
   getMe, updateProfile, changePassword, googleLogin, githubLogin,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
@@ -16,6 +16,7 @@ const { protect } = require('../middleware/authMiddleware');
 router.post('/register', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:token', resetPassword);
 router.post('/google', googleLogin);
 router.post('/github', githubLogin);
 

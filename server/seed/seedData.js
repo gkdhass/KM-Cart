@@ -107,38 +107,38 @@ async function seedDatabase() {
     console.log('\n🌱 Starting database seed...\n');
 
     // ── Clear existing data ──────────────────────────────────────────
-    console.log('🗑️  Clearing existing data...');
+    console.log('Clearing existing data...');
     await User.deleteMany({});
     await Product.deleteMany({});
     await Order.deleteMany({});
     await FAQ.deleteMany({});
-    console.log('   ✅ All collections cleared\n');
+    console.log('   OK All collections cleared\n');
 
     // ── Generate and Seed Products ───────────────────────────────────
-    console.log('📦 Generating products...');
+    console.log('Generating products...');
     const allProducts = generateAllProducts();
     console.log(`   Generated ${allProducts.length} products`);
 
-    console.log('📦 Inserting products into database...');
+    console.log('Inserting products into database...');
     const products = await Product.insertMany(allProducts);
-    console.log(`   ✅ ${products.length} products created\n`);
+    console.log(`   OK ${products.length} products created\n`);
 
     // ── Seed FAQs ────────────────────────────────────────────────────
-    console.log('❓ Seeding FAQs...');
+    console.log('Seeding FAQs...');
     const faqs = await FAQ.insertMany(sampleFAQs);
-    console.log(`   ✅ ${faqs.length} FAQs created\n`);
+    console.log(`   OK ${faqs.length} FAQs created\n`);
 
     // ── Create Test User ─────────────────────────────────────────────
-    console.log('👤 Creating test user...');
+    console.log('Creating test user...');
     const testUser = await User.create({
       name: 'Test User',
       email: 'test@gkcart.com',
       password: 'password123',
     });
-    console.log(`   ✅ Test user created: ${testUser.email}\n`);
+    console.log(`   OK Test user created: ${testUser.email}\n`);
 
     // ── Seed Orders for Test User ────────────────────────────────────
-    console.log('🛒 Seeding orders for test user...');
+    console.log('Seeding orders for test user...');
 
     const sampleOrders = [
       {
@@ -185,7 +185,7 @@ async function seedDatabase() {
     ];
 
     const orders = await Order.insertMany(sampleOrders);
-    console.log(`   ✅ ${orders.length} orders created\n`);
+    console.log(`   OK ${orders.length} orders created\n`);
 
     // ── Category breakdown ───────────────────────────────────────────
     const categories = {};
@@ -195,20 +195,20 @@ async function seedDatabase() {
 
     // ── Summary ──────────────────────────────────────────────────────
     console.log('═══════════════════════════════════════════════');
-    console.log('  🎉 Database seeded successfully!');
+    console.log('  Database seeded successfully!');
     console.log('═══════════════════════════════════════════════');
-    console.log(`  📦 Products: ${products.length}`);
+    console.log(`  Products: ${products.length}`);
     Object.entries(categories).sort((a, b) => b[1] - a[1]).forEach(([cat, count]) => {
       console.log(`     └─ ${cat}: ${count}`);
     });
-    console.log(`  ❓ FAQs:     ${faqs.length}`);
-    console.log(`  👤 Users:    1 (test@gkcart.com / password123)`);
-    console.log(`  🛒 Orders:   ${orders.length}`);
+    console.log(`  FAQs:     ${faqs.length}`);
+    console.log(`  Users:    1 (test@gkcart.com / password123)`);
+    console.log(`  Orders:   ${orders.length}`);
     console.log('═══════════════════════════════════════════════\n');
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seed error:', error.message);
+    console.error('Seed error:', error.message);
     console.error(error);
     process.exit(1);
   }

@@ -42,11 +42,11 @@ const missingKeys = Object.entries(REQUIRED_KEYS)
   .map(([, envName]) => envName);
 
 if (missingKeys.length > 0) {
-  console.error('❌ Missing Firebase env vars:', missingKeys.join(', '));
-  console.error('⚠️  Add them to client/.env and restart the dev server!');
+  console.error('Missing Firebase env vars:', missingKeys.join(', '));
+  console.error('Add them to client/.env and restart the dev server!');
 } else {
   firebaseReady = true;
-  console.log('✅ Firebase config loaded!');
+  console.log('Firebase config loaded!');
 }
 
 // ── Initialize Firebase ──────────────────────────────────────────────
@@ -72,7 +72,7 @@ if (firebaseReady) {
     githubProvider = new GithubAuthProvider();
     githubProvider.addScope('user:email');
   } catch (error) {
-    console.error('❌ Firebase init failed:', error.message);
+    console.error('Firebase init failed:', error.message);
     firebaseReady = false;
   }
 }

@@ -282,7 +282,7 @@ function Dashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm text-center py-8">All products well stocked! 🎉</p>
+            <p className="text-gray-400 text-sm text-center py-8">All products well stocked!</p>
           )}
         </div>
       </div>

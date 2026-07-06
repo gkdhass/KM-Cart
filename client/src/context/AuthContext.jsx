@@ -36,25 +36,42 @@ export function AuthProvider({ children }) {
 
   /**
    * Restore session from localStorage on initial mount.
-   * Validates that both token and user data exist before restoring.
+   * Then validate/refresh user data from database via /api/auth/me.
    */
   useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem(TOKEN_KEY);
-      const storedUser = localStorage.getItem(USER_KEY);
+    const restoreSession = async () => {
+      try {
+        const storedToken = localStorage.getItem(TOKEN_KEY);
+        const storedUser = localStorage.getItem(USER_KEY);
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        if (storedToken && storedUser) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+
+          // Fetch fresh user data from database to ensure role is up-to-date
+          try {
+            const response = await api.get('/auth/me');
+            if (response.data.success && response.data.user) {
+              const freshUser = response.data.user;
+              setUser(freshUser);
+              localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
+            }
+          } catch (error) {
+            // If /me fails, keep using localStorage data (token might be expired)
+            console.warn('Failed to fetch fresh user data:', error.message);
+          }
+        }
+      } catch (error) {
+        // If stored data is corrupted, clear it
+        console.error('Failed to restore session:', error);
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      // If stored data is corrupted, clear it
-      console.error('Failed to restore session:', error);
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    restoreSession();
   }, []);
 
   /**

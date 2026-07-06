@@ -239,11 +239,14 @@ function Checkout() {
 
     try {
       // Step 4: Create Razorpay order on backend
+      console.log('[Checkout] Creating Razorpay order, amount:', finalTotalCalc);
       const rzpOrderRes = await api.post('/payment/create-order', {
         amount: finalTotalCalc,
         currency: 'INR',
         receipt: 'receipt_' + Date.now()
       });
+
+      console.log('[Checkout] Razorpay order response:', rzpOrderRes.data);
 
       if (!rzpOrderRes.data.success) {
         throw new Error(rzpOrderRes.data.message || 'Failed to create payment order');
@@ -252,11 +255,22 @@ function Checkout() {
       // Step 5: Load Razorpay script then open popup
       const loadRazorpay = () => {
         return new Promise((resolve) => {
-          if (window.Razorpay) { resolve(true); return; }
+          if (window.Razorpay) { 
+            console.log('[Checkout] Razorpay already loaded');
+            resolve(true); 
+            return; 
+          }
+          console.log('[Checkout] Loading Razorpay script...');
           const script = document.createElement('script');
           script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
+          script.onload = () => {
+            console.log('[Checkout] Razorpay script loaded successfully');
+            resolve(true);
+          };
+          script.onerror = () => {
+            console.error('[Checkout] Razorpay script failed to load');
+            resolve(false);
+          };
           document.body.appendChild(script);
         });
       };
@@ -269,6 +283,7 @@ function Checkout() {
       }
 
       // Step 6: Configure Razorpay options
+      console.log('[Checkout] Configuring Razorpay with keyId:', rzpOrderRes.data.keyId);
       const options = {
         key: rzpOrderRes.data.keyId,
         amount: rzpOrderRes.data.amount,
@@ -281,10 +296,11 @@ function Checkout() {
           contact: phone,
           email: user?.email || ''
         },
-        theme: { color: '#4F46E5' },
+        theme: { color: '#7C8BF2' },
 
         // Step 7: Handler fires AFTER Razorpay confirms payment
         handler: async function (response) {
+          console.log('[Checkout] Payment successful, verifying...', response);
           try {
             // CRITICAL: Use token captured in outer closure
             const verifyRes = await api.post('/payment/verify', {
@@ -293,6 +309,8 @@ function Checkout() {
               razorpay_signature: response.razorpay_signature,
               orderData: orderData
             });
+
+            console.log('[Checkout] Verification response:', verifyRes.data);
 
             if (verifyRes.data.success) {
               clearCart();
@@ -304,7 +322,7 @@ function Checkout() {
               setLoading(false);
             }
           } catch (verifyErr) {
-            console.error('Payment verify error:', verifyErr.response?.data || verifyErr);
+            console.error('[Checkout] Payment verify error:', verifyErr.response?.data || verifyErr);
             setError('Payment was received but order confirmation failed. Contact support with payment ID: ' + response.razorpay_payment_id);
             setLoading(false);
           }
@@ -312,21 +330,24 @@ function Checkout() {
 
         modal: {
           ondismiss: function () {
+            console.log('[Checkout] Payment modal dismissed by user');
             setError('Payment was cancelled. Please try again.');
             setLoading(false);
           }
         }
       };
 
+      console.log('[Checkout] Opening Razorpay checkout...');
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response) {
+        console.error('[Checkout] Payment failed:', response.error);
         setError('Payment failed: ' + response.error.description);
         setLoading(false);
       });
       rzp.open();
 
     } catch (err) {
-      console.error('Razorpay init error:', err.response?.data || err);
+      console.error('[Checkout] Razorpay init error:', err.response?.data || err);
       setError(err.response?.data?.message || 'Payment initialization failed. Try again.');
       setLoading(false);
     }

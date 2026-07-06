@@ -13,7 +13,7 @@ import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 import ProductCard from '../components/Products/ProductCard';
 import {
-  FaSearch, FaRobot, FaShoppingBag, FaFire, FaSpinner,
+  FaSearch, FaRobot, FaShoppingBag, FaFire, FaSpinner, FaTruck, FaUndo, FaLock,
 } from 'react-icons/fa';
 
 /**
@@ -25,7 +25,7 @@ const CATEGORIES = [
     id: 'Oil',
     label: 'Oil',
     tamil: 'எண்ணெய்',
-    emoji: '🫙',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&h=200&fit=crop',
     color: 'bg-yellow-50 border-yellow-200',
   },
@@ -33,7 +33,7 @@ const CATEGORIES = [
     id: 'Masala',
     label: 'Masala',
     tamil: 'மசாலா',
-    emoji: '🌶️',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&h=200&fit=crop',
     color: 'bg-red-50 border-red-200',
   },
@@ -41,7 +41,7 @@ const CATEGORIES = [
     id: 'Rice & Grains',
     label: 'Rice & Grains',
     tamil: 'அரிசி',
-    emoji: '🌾',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&h=200&fit=crop',
     color: 'bg-amber-50 border-amber-200',
   },
@@ -49,7 +49,7 @@ const CATEGORIES = [
     id: 'Pulses & Dal',
     label: 'Pulses & Dal',
     tamil: 'பருப்பு',
-    emoji: '🫘',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1613743983303-b3e89f8a2b80?w=200&h=200&fit=crop',
     color: 'bg-orange-50 border-orange-200',
   },
@@ -57,7 +57,7 @@ const CATEGORIES = [
     id: 'Spices',
     label: 'Spices',
     tamil: 'முழு மசாலா',
-    emoji: '🧂',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1532336414041-8e2b9eec0be3?w=200&h=200&fit=crop',
     color: 'bg-yellow-50 border-yellow-300',
   },
@@ -65,7 +65,7 @@ const CATEGORIES = [
     id: 'Sugar & Sweeteners',
     label: 'Sugar & Sweeteners',
     tamil: 'சர்க்கரை',
-    emoji: '🍬',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=200&h=200&fit=crop',
     color: 'bg-pink-50 border-pink-200',
   },
@@ -81,7 +81,7 @@ const CATEGORIES = [
     id: 'Household & Cleaning',
     label: 'Household',
     tamil: 'வீட்டு சுத்தம்',
-    emoji: '🧼',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=200&h=200&fit=crop',
     color: 'bg-blue-50 border-blue-200',
   },
@@ -89,7 +89,7 @@ const CATEGORIES = [
     id: 'Packaged & Ready',
     label: 'Packaged',
     tamil: 'தயார் உணவு',
-    emoji: '🥫',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=200&h=200&fit=crop',
     color: 'bg-purple-50 border-purple-200',
   },
@@ -97,7 +97,7 @@ const CATEGORIES = [
     id: 'Dairy',
     label: 'Dairy',
     tamil: 'பால் பொருட்கள்',
-    emoji: '🥛',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=200&h=200&fit=crop',
     color: 'bg-sky-50 border-sky-200',
   },
@@ -105,7 +105,7 @@ const CATEGORIES = [
     id: 'Snacks',
     label: 'Snacks',
     tamil: 'நொறுக்குத் தீனி',
-    emoji: '🍿',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=200&h=200&fit=crop',
     color: 'bg-yellow-50 border-yellow-200',
   },
@@ -113,7 +113,7 @@ const CATEGORIES = [
     id: 'Biscuits & Cookies',
     label: 'Biscuits',
     tamil: 'பிஸ்கட்',
-    emoji: '🍪',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=200&h=200&fit=crop',
     color: 'bg-amber-50 border-amber-200',
   },
@@ -121,7 +121,7 @@ const CATEGORIES = [
     id: 'Chocolates',
     label: 'Chocolates',
     tamil: 'சாக்லேட்',
-    emoji: '🍫',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=200&h=200&fit=crop',
     color: 'bg-yellow-50 border-yellow-700',
   },
@@ -129,7 +129,7 @@ const CATEGORIES = [
     id: 'Juices & Drinks',
     label: 'Juices',
     tamil: 'ஜூஸ்',
-    emoji: '🧃',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=200&h=200&fit=crop',
     color: 'bg-indigo-50 border-indigo-200',
   },
@@ -137,7 +137,7 @@ const CATEGORIES = [
     id: 'Dry Fruits & Nuts',
     label: 'Dry Fruits',
     tamil: 'உலர் பழங்கள்',
-    emoji: '🥜',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=200&h=200&fit=crop',
     color: 'bg-amber-50 border-amber-300',
   },
@@ -145,7 +145,7 @@ const CATEGORIES = [
     id: 'Pickles & Sauces',
     label: 'Pickles',
     tamil: 'ஊறுகாய்',
-    emoji: '🍯',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=200&h=200&fit=crop',
     color: 'bg-indigo-50 border-indigo-200',
   },
@@ -153,7 +153,7 @@ const CATEGORIES = [
     id: 'Personal Care',
     label: 'Personal Care',
     tamil: 'தனிநபர் பராமரிப்பு',
-    emoji: '🧴',
+    emoji: '',
     image: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=200&h=200&fit=crop',
     color: 'bg-purple-50 border-purple-200',
   },
@@ -376,11 +376,11 @@ function Home() {
               Welcome back, <span className="font-semibold text-white">{user.name}</span>!
             </p>
           )}
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2">
-            🛒 K_M_Cart
+          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 animate-hero-fade">
+            K_M_Cart
           </h1>
-          <p className="text-indigo-200 text-sm md:text-base mb-6">
-            Fresh Groceries · Best Prices · Delivered Fast 🚚
+          <p className="text-indigo-200 text-sm md:text-base mb-6 animate-hero-slide">
+            Fresh Groceries · Best Prices · Delivered Fast
           </p>
 
           {/* Search bar */}
@@ -416,7 +416,23 @@ function Home() {
               <FaShoppingBag className="text-xs" /> Shop Now
             </button>
             <button
-              onClick={() => showToast('AI Chat is available at the bottom right corner!')}
+              onClick={() => {
+                // Scroll to bottom to reveal chatbot button, then auto-click it
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                setTimeout(() => {
+                  // Find chatbot button by multiple selectors for robustness
+                  const chatbotBtn = 
+                    document.querySelector('[aria-label="Open chat assistant"]') ||
+                    document.querySelector('#chatbot-fab button') ||
+                    document.querySelector('[title="Chat with K_M_Cart Assistant"]');
+                  
+                  if (chatbotBtn) {
+                    chatbotBtn.click();
+                  } else {
+                    showToast('AI Chat is available at the bottom right corner!');
+                  }
+                }, 600);
+              }}
               className="px-5 py-2 bg-white/20 backdrop-blur-sm text-white border border-white/30
                          rounded-xl text-sm font-medium hover:bg-white/30 transition-all duration-200
                          flex items-center gap-2"
@@ -430,7 +446,7 @@ function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ── SECTION 2: CATEGORY QUICK LINKS WITH IMAGES ────────────── */}
         <section className="py-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-5">🛍️ Shop by Category</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-5">Shop by Category</h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {CATEGORIES.map((cat, index) => (
               <div
@@ -438,7 +454,8 @@ function Home() {
                 onClick={() => navigate(`/products?category=${encodeURIComponent(cat.id)}`)}
                 className={`${cat.color} border-2 rounded-2xl p-3 cursor-pointer
                            hover:shadow-md hover:scale-105 transition-all duration-200
-                           flex flex-col items-center text-center group`}
+                           flex flex-col items-center text-center group animate-stagger-card`}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Category Image */}
                 <div className="w-16 h-16 rounded-xl overflow-hidden mb-2 bg-white/50">
@@ -478,7 +495,9 @@ function Home() {
         <section className="py-6">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
-              <FaFire className="text-xl text-red-500" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-md">
+                <FaFire className="text-white text-lg" />
+              </div>
               <h2 className="text-xl font-bold text-gray-900">Deals of the Day</h2>
             </div>
             <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1.5 rounded-full border border-red-100">
@@ -509,7 +528,7 @@ function Home() {
                   {/* DEAL banner */}
                   <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-[10px] font-bold
                                   px-2 py-0.5 rounded-full shadow-sm">
-                    🔥 DEAL
+                    DEAL
                   </div>
                   <ProductCard
                     product={product}
@@ -623,7 +642,7 @@ function Home() {
               {!hasMore && products.length > 0 && (
                 <div className="text-center py-8">
                   <p className="text-sm text-gray-400 font-medium">
-                    🎉 You&apos;ve seen all products!
+                    You've seen all products!
                   </p>
                 </div>
               )}
@@ -671,21 +690,27 @@ function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="flex items-center justify-center gap-3 text-center sm:text-left">
-              <span className="text-3xl">🚚</span>
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <FaTruck className="text-xl text-emerald-600" />
+              </div>
               <div>
                 <p className="font-semibold text-gray-800 text-sm">Free Delivery</p>
                 <p className="text-xs text-gray-500">On orders above ₹500</p>
               </div>
             </div>
             <div className="flex items-center justify-center gap-3 text-center sm:text-left">
-              <span className="text-3xl">🔄</span>
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <FaUndo className="text-xl text-blue-600" />
+              </div>
               <div>
                 <p className="font-semibold text-gray-800 text-sm">Easy 30-day Returns</p>
                 <p className="text-xs text-gray-500">Hassle-free return policy</p>
               </div>
             </div>
             <div className="flex items-center justify-center gap-3 text-center sm:text-left">
-              <span className="text-3xl">🔒</span>
+              <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                <FaLock className="text-xl text-indigo-600" />
+              </div>
               <div>
                 <p className="font-semibold text-gray-800 text-sm">100% Secure Payments</p>
                 <p className="text-xs text-gray-500">Razorpay encrypted checkout</p>
