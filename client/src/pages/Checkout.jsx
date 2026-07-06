@@ -11,9 +11,10 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import api from '../utils/api';
+import toast from 'react-hot-toast';
 import {
   FaTruck, FaCreditCard, FaMobileAlt, FaMoneyBillWave, FaUniversity,
-  FaLock, FaSpinner, FaFlask,
+  FaLock, FaSpinner, FaFlask, FaCheckCircle,
 } from 'react-icons/fa';
 
 /** All Indian states for dropdown */
@@ -215,6 +216,15 @@ function Checkout() {
         });
 
         if (response.data.success) {
+          // Show immediate success confirmation
+          toast.success(
+            'Order Placed Successfully!',
+            {
+              icon: <FaCheckCircle className="text-xl" />,
+              duration: 4000,
+            }
+          );
+          
           clearCart();
           navigate('/order-success', {
             state: { order: response.data.order }
@@ -366,6 +376,15 @@ function Checkout() {
             console.log('[Checkout] Verification response:', verifyRes.data);
 
             if (verifyRes.data.success) {
+              // Show immediate success confirmation
+              toast.success(
+                'Order Placed Successfully!',
+                {
+                  icon: <FaCheckCircle className="text-xl" />,
+                  duration: 4000,
+                }
+              );
+              
               clearCart();
               navigate('/order-success', {
                 state: { order: verifyRes.data.order }
