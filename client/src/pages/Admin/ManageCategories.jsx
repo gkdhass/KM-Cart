@@ -174,7 +174,7 @@ function ManageCategories() {
         </button>
       </div>
 
-      {/* Table */}
+      {/* Table - Desktop view */}
       <div className="bg-white rounded-2xl border border-[#E8C99A] overflow-hidden">
         {loading ? (
           <div className="p-8 space-y-4">
@@ -189,90 +189,161 @@ function ManageCategories() {
             <p className="text-gray-400 text-sm mt-1">Add your first category to get started.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#E8C99A] bg-[#FBE8CE]/50">
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Order
-                  </th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Category Name
-                  </th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell">
-                    Description
-                  </th>
-                  <th className="text-center px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Products
-                  </th>
-                  <th className="text-center px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="text-right px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {categories.map((cat) => (
-                  <tr key={cat._id} className="hover:bg-[#FBE8CE]/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-gray-500 text-sm font-medium">{cat.order || '—'}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#FBE8CE] flex items-center justify-center">
-                          <HiOutlineTag className="w-4 h-4 text-[#F96D00]" />
+          <>
+            {/* Desktop table (hidden on mobile) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead>
+                  <tr className="border-b border-[#E8C99A] bg-[#FBE8CE]/50">
+                    <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Order
+                    </th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Category Name
+                    </th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Description
+                    </th>
+                    <th className="text-center px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Products
+                    </th>
+                    <th className="text-center px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="text-right px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {categories.map((cat) => (
+                    <tr key={cat._id} className="hover:bg-[#FBE8CE]/20 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="text-gray-500 text-sm font-medium">{cat.order || '—'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#FBE8CE] flex items-center justify-center flex-shrink-0">
+                            <HiOutlineTag className="w-4 h-4 text-[#F96D00]" />
+                          </div>
+                          <span className="text-black font-medium text-sm">{cat.name}</span>
                         </div>
-                        <span className="text-black font-medium text-sm">{cat.name}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-gray-500 text-sm truncate max-w-[200px] block">
+                          {cat.description || '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold">
+                          {cat.productCount || 0}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {cat.isActive ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
+                            <HiOutlineCheckCircle className="w-3.5 h-3.5" />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-500 text-xs font-medium">
+                            <HiOutlineXCircle className="w-3.5 h-3.5" />
+                            Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(cat)}
+                            className="p-2 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                          >
+                            <HiOutlinePencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(cat)}
+                            className="p-2 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <HiOutlineTrash className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card view (shown on screens < 768px) */}
+            <div className="md:hidden divide-y divide-[#E8C99A]">
+              {categories.map((cat, idx) => (
+                <div
+                  key={cat._id}
+                  className={`p-4 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#FBE8CE]/20'}`}
+                >
+                  {/* Category header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-[#FBE8CE] flex items-center justify-center flex-shrink-0">
+                        <HiOutlineTag className="w-5 h-5 text-[#F96D00]" />
                       </div>
-                    </td>
-                    <td className="px-6 py-4 hidden sm:table-cell">
-                      <span className="text-gray-500 text-sm truncate max-w-[200px] block">
-                        {cat.description || '—'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-black font-semibold text-sm truncate">{cat.name}</p>
+                        <p className="text-gray-500 text-xs">Order: {cat.order || '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <button
+                        onClick={() => openEditModal(cat)}
+                        className="p-2 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="Edit"
+                      >
+                        <HiOutlinePencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(cat)}
+                        className="p-2 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Delete"
+                      >
+                        <HiOutlineTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {cat.description && (
+                    <p className="text-gray-500 text-xs mb-3 line-clamp-2">{cat.description}</p>
+                  )}
+
+                  {/* Meta info */}
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-500">Products:</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-blue-50 text-blue-600 font-semibold">
                         {cat.productCount || 0}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-500">Status:</span>
                       {cat.isActive ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium">
-                          <HiOutlineCheckCircle className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium">
+                          <HiOutlineCheckCircle className="w-3 h-3" />
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-500 text-xs font-medium">
-                          <HiOutlineXCircle className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">
+                          <HiOutlineXCircle className="w-3 h-3" />
                           Inactive
                         </span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(cat)}
-                          className="p-2 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <HiOutlinePencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(cat)}
-                          className="p-2 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          title="Delete"
-                        >
-                          <HiOutlineTrash className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

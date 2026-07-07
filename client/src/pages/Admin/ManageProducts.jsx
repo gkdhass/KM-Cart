@@ -70,11 +70,11 @@ function ManageProducts() {
     {
       header: 'Product',
       render: (row) => (
-        <div className="flex items-center gap-3 min-w-[200px]">
+        <div className="flex items-center gap-3 max-w-full">
           <img src={row.image} alt={row.name}
             className="w-10 h-10 rounded-lg object-cover bg-white/5 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-black text-sm font-medium truncate max-w-[200px]">{row.name}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-black text-sm font-medium truncate">{row.name}</p>
             <p className="text-gray-600 text-xs">{row.brand || 'Generic'}</p>
           </div>
         </div>

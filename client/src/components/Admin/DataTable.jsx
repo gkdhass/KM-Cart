@@ -18,15 +18,15 @@ function DataTable({
 }) {
   return (
     <div className="bg-white rounded-2xl border border-[#E8C99A] overflow-hidden shadow-sm">
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      {/* Table - Desktop only (hidden on mobile) */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full min-w-[800px]">
           <thead>
             <tr className="bg-[#E4DFB5] border-b border-[#E8C99A]">
               {columns.map((col, idx) => (
                 <th
                   key={idx}
-                  className={`px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider ${col.className || ''}`}
+                  className={`px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap ${col.className || ''}`}
                 >
                   {col.header}
                 </th>
@@ -76,6 +76,43 @@ function DataTable({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Card Layout - Mobile only (shown on screens < 768px) */}
+      <div className="md:hidden divide-y divide-[#E8C99A]">
+        {loading ? (
+          Array.from({ length: 5 }).map((_, idx) => (
+            <div key={idx} className="p-4 space-y-3">
+              <div className="h-4 bg-[#FBE8CE] rounded-lg animate-pulse w-2/3" />
+              <div className="h-3 bg-[#FBE8CE] rounded-lg animate-pulse w-1/2" />
+              <div className="h-3 bg-[#FBE8CE] rounded-lg animate-pulse w-3/4" />
+            </div>
+          ))
+        ) : data.length > 0 ? (
+          data.map((row, rowIdx) => (
+            <div
+              key={row._id || rowIdx}
+              className={`p-4 ${rowIdx % 2 === 0 ? 'bg-white' : 'bg-[#FBE8CE]/20'}`}
+            >
+              {columns.map((col, colIdx) => (
+                <div key={colIdx} className="mb-3 last:mb-0">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                    {col.header}
+                  </div>
+                  <div className="text-sm text-gray-900">
+                    {col.render ? col.render(row, rowIdx) : row[col.accessor]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        ) : (
+          <div className="px-6 py-16 text-center">
+            <HiOutlineInbox className="w-12 h-12 text-[#E8C99A] mx-auto mb-3" />
+            <p className="text-gray-900 font-semibold">{emptyTitle}</p>
+            <p className="text-gray-500 text-sm mt-1">{emptyMessage}</p>
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
