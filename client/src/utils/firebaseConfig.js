@@ -119,26 +119,17 @@ export const signInWithGoogle = async () => {
     );
   }
 
-  // Detect if we should use redirect instead of popup
-  const shouldUseRedirect = isMobileViewport();
-  
-  console.log('[Firebase] Google sign-in method:', shouldUseRedirect ? 'redirect' : 'popup');
+  const isMobile = isMobileViewport();
+  console.log('[Firebase] Google sign-in attempt on', isMobile ? 'MOBILE' : 'DESKTOP', 'device');
 
   try {
-    // Mobile: Use redirect (no popup blocking issues)
-    if (shouldUseRedirect) {
-      console.log('[Firebase] Using signInWithRedirect for mobile viewport');
-      await signInWithRedirect(auth, googleProvider);
-      // Function returns here - user will be redirected away
-      // Result will be handled by getRedirectResult() on page load
-      return null; // Redirect in progress
-    }
-    
-    // Desktop: Try popup first
-    console.log('[Firebase] Attempting signInWithPopup');
+    // TRY POPUP FIRST (works on modern mobile browsers - iOS Safari 13+, Chrome Android)
+    // Popup is more reliable than redirect because it doesn't lose session state
+    console.log('[Firebase] Attempting signInWithPopup (works on modern mobile browsers)');
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
 
+    console.log('[Firebase] ✓ Popup sign-in successful:', user.email);
     return {
       name: user.displayName || 'Google User',
       email: user.email,
@@ -148,20 +139,26 @@ export const signInWithGoogle = async () => {
     };
     
   } catch (error) {
-    console.error('Google sign-in error:', error.code, error.message);
+    console.error('[Firebase] Popup sign-in error:', error.code, error.message);
     
-    // Auto-retry with redirect if popup was blocked
-    if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-      console.warn('[Firebase] Popup blocked, retrying with redirect...');
+    // FALLBACK: If popup was blocked OR user closed it, try redirect
+    if (error.code === 'auth/popup-blocked' || 
+        error.code === 'auth/cancelled-popup-request' ||
+        error.code === 'auth/popup-closed-by-user') {
+      
+      console.warn('[Firebase] Popup blocked or cancelled, falling back to redirect...');
+      
       try {
         await signInWithRedirect(auth, googleProvider);
+        console.log('[Firebase] Redirect initiated - user will return after OAuth');
         return null; // Redirect in progress
       } catch (redirectError) {
-        console.error('Redirect also failed:', redirectError);
+        console.error('[Firebase] Redirect also failed:', redirectError);
         throw new Error(getFirebaseErrorMessage(redirectError));
       }
     }
     
+    // For other errors, throw immediately
     throw new Error(getFirebaseErrorMessage(error));
   }
 };
@@ -174,15 +171,52 @@ export const signInWithGoogle = async () => {
  */
 export const checkRedirectResult = async () => {
   if (!firebaseReady || !auth) {
+    console.log('[Firebase] checkRedirectResult: Firebase not ready');
     return null;
   }
 
+  // DIAGNOSTIC: Check if URL contains Firebase auth callback params
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasAuthParams = urlParams.has('apiKey') || urlParams.has('state') || urlParams.has('mode');
+
   try {
+    if (hasAuthParams) {
+      console.log('[Firebase] 🔍 DIAGNOSTIC: URL contains Firebase auth params:', {
+        apiKey: urlParams.has('apiKey'),
+        state: urlParams.has('state'),
+        mode: urlParams.has('mode'),
+        fullURL: window.location.href
+      });
+    }
+    
+    // DIAGNOSTIC: Check storage availability
+    try {
+      localStorage.setItem('firebase_test', '1');
+      localStorage.removeItem('firebase_test');
+      console.log('[Firebase] ✓ localStorage is available');
+    } catch (e) {
+      console.error('[Firebase] ⚠️ localStorage is BLOCKED:', e.message);
+    }
+    
+    try {
+      sessionStorage.setItem('firebase_test', '1');
+      sessionStorage.removeItem('firebase_test');
+      console.log('[Firebase] ✓ sessionStorage is available');
+    } catch (e) {
+      console.error('[Firebase] ⚠️ sessionStorage is BLOCKED:', e.message);
+    }
+    
     console.log('[Firebase] Checking for redirect result...');
     const result = await getRedirectResult(auth);
     
     if (!result) {
-      console.log('[Firebase] No redirect result found (normal page load)');
+      if (hasAuthParams) {
+        console.error('[Firebase] 🚨 CRITICAL: URL has auth params but getRedirectResult() returned NULL');
+        console.error('[Firebase] This indicates LOST SESSION STATE - likely mobile browser storage blocking');
+        console.error('[Firebase] Check: iOS Safari Intelligent Tracking Prevention or private browsing mode');
+      } else {
+        console.log('[Firebase] No redirect result found (normal page load)');
+      }
       return null;
     }
     
@@ -203,7 +237,17 @@ export const checkRedirectResult = async () => {
       provider: isGoogle ? 'google' : 'github',
     };
   } catch (error) {
-    console.error('[Firebase] Redirect result error:', error.code, error.message);
+    console.error('[Firebase] Redirect result error:', {
+      code: error.code,
+      message: error.message,
+      fullError: error
+    });
+    
+    // DIAGNOSTIC: Log full error details for debugging
+    if (hasAuthParams) {
+      console.error('[Firebase] Error occurred with auth params in URL - this may indicate storage/cookie blocking');
+    }
+    
     throw new Error(getFirebaseErrorMessage(error));
   }
 };
