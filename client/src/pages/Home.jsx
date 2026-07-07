@@ -13,7 +13,7 @@ import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 import ProductCard from '../components/Products/ProductCard';
 import {
-  FaSearch, FaRobot, FaShoppingBag, FaFire, FaSpinner, FaTruck, FaUndo, FaLock,
+  FaSearch, FaRobot, FaShoppingBag, FaFire, FaSpinner, FaTruck, FaUndo, FaLock, FaBox,
 } from 'react-icons/fa';
 
 /**
@@ -457,25 +457,21 @@ function Home() {
                            flex flex-col items-center text-center group animate-stagger-card`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                {/* Category Image */}
-                <div className="w-16 h-16 rounded-xl overflow-hidden mb-2 bg-white/50">
+                {/* Category Image — fixed size with uniform fallback */}
+                <div className="w-16 h-16 rounded-xl overflow-hidden mb-2 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
                   {!catImgErrors[cat.id] ? (
                     <img
                       src={cat.image}
                       alt={cat.label}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       onError={() => setCatImgErrors((prev) => ({ ...prev, [cat.id]: true }))}
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">
-                      {cat.emoji}
-                    </div>
+                    /* Uniform fallback — same as ProductImage */
+                    <FaBox className="text-gray-400 text-2xl" />
                   )}
                 </div>
-
-                {/* Emoji fallback shown below image */}
-                <span className="text-lg mb-0.5">{cat.emoji}</span>
 
                 {/* English name */}
                 <p className="font-semibold text-gray-800 text-xs leading-tight">
