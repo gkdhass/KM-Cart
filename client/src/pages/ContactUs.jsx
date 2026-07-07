@@ -1,15 +1,26 @@
 /**
  * @file client/src/pages/ContactUs.jsx
- * @description Contact Us page with contact info and a contact form.
+ * @description Contact Us page with contact info and EmailJS-powered contact form.
  * Route: /contact
+ * 
+ * EmailJS Configuration:
+ * - Public Key: DvGqqb5LgEqqsIZF7
+ * - Service ID: service_thw34pu
+ * - Template ID: template_x14cx9p
  */
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
 import {
   FaArrowLeft, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope,
   FaClock, FaPaperPlane, FaCheckCircle, FaSpinner,
 } from 'react-icons/fa';
+
+// EmailJS Configuration
+const EMAILJS_PUBLIC_KEY = 'DvGqqb5LgEqqsIZF7';
+const EMAILJS_SERVICE_ID = 'service_thw34pu';
+const EMAILJS_TEMPLATE_ID = 'template_x14cx9p';
 
 function ContactUs() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -24,21 +35,54 @@ function ContactUs() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
 
+    // Validate form fields
     if (!form.name.trim() || !form.email.trim() || !form.subject.trim() || !form.message.trim()) {
       setError('Please fill in all fields.');
       return;
     }
 
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
 
-    // Simulate API call (no backend endpoint required yet)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setSuccess(true);
-      setForm({ name: '', email: '', subject: '', message: '' });
+      // Send email via EmailJS
+      // Template variables should match your EmailJS template placeholders
+      const templateParams = {
+        from_name: form.name,
+        from_email: form.email,
+        subject: form.subject,
+        message: form.message,
+        to_name: 'K_M_Cart Team', // Replace with your name/team name
+      };
+
+      const response = await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams,
+        EMAILJS_PUBLIC_KEY
+      );
+
+      console.log('EmailJS response:', response);
+
+      if (response.status === 200) {
+        setSuccess(true);
+        setForm({ name: '', email: '', subject: '', message: '' });
+        
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => setSuccess(false), 5000);
+      } else {
+        throw new Error('Email send failed');
+      }
     } catch (err) {
-      setError('Failed to send message. Please try again.');
+      console.error('EmailJS error:', err);
+      setError('Failed to send message. Please try again or contact us directly at mohandhassgovind@gmail.com');
     } finally {
       setLoading(false);
     }
