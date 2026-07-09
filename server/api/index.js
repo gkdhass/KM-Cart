@@ -184,25 +184,6 @@ const connectDB = async () => {
 
   return connectionPromise;
 };
-      console.log(`[DB] ✅ MongoDB Connected: ${host} (${elapsed}ms)`);
-      console.log(`[DB] 📦 Database: ${dbName}`);
-      
-      cachedConnection = conn;
-      return conn;
-      
-    } catch (error) {
-      console.error('[DB ERROR] ❌ Connection failed:', error.message);
-      
-      // Clear both cache and promise on error so next request can retry
-      cachedConnection = null;
-      connectionPromise = null;
-      
-      throw error;
-    }
-  })();
-
-  return connectionPromise;
-};
 
 // ─────────────────────────────────────────────────────────────────────
 // API ROUTES
