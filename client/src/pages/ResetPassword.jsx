@@ -234,3 +234,48 @@ function ResetPassword() {
 }
 
 export default ResetPassword;
+On mobile, my product/category cards look inconsistent — most show real 
+photos, but some show a blank white box (e.g. "Spices" category card) or a 
+plain letter-avatar fallback (e.g. "Rice Bran Oil" deal card shows a big "R" 
+instead of a photo). Fix this so every card has a uniform, fixed-size image 
+area regardless of whether the real image loads.
+
+1) ENFORCE FIXED, CONSISTENT IMAGE DIMENSIONS
+   - Category cards (client/src/pages/Home.jsx, "Shop by Category" section, 
+     currently w-16 h-16 thumbnail): confirm every category image container 
+     is exactly the same fixed size, with object-cover so any image (any 
+     aspect ratio) fills it identically — no stretching, no letterboxing.
+   - Deal/product cards (client/src/components/Products/ProductCard.jsx, 
+     currently h-48 image area): same fixed height on every single card — 
+     confirm this is actually being applied consistently including for the 
+     "Deals of the Day" cards on Home.jsx, not just the main Products grid.
+   - Every card in the same row/grid must have IDENTICAL image container 
+     dimensions — no card should be taller/shorter than its neighbors 
+     because of its content.
+
+2) FIX THE ACTUAL BROKEN IMAGES (root cause, not just cosmetic)
+   - Audit the product/category data for "Spices" and "Rice Bran Oil" (and 
+     any others) — check their image URL field in the database. Blank white 
+     = likely an empty string or a broken URL that fails silently. The 
+     letter-avatar for "Rice Bran Oil" = an intentional fallback component 
+     triggering, meaning ITS image URL is also missing/broken.
+   - Fix or replace the actual image URLs for these specific products/
+     categories so real photos load, same as the working ones.
+
+3) STANDARDIZE THE FALLBACK DESIGN (for cases where an image genuinely can't load)
+   - Right now there are two different broken states: a blank white box AND 
+     a letter avatar — pick ONE consistent fallback style (recommend: a 
+     light gray box with a small generic product/category icon in the 
+     center, not a giant single letter) and use it everywhere an image URL 
+     is missing or fails to load (via onError on the <img> tag).
+   - This fallback must be the SAME fixed size as a real image would be, so 
+     broken cards still align perfectly in the grid.
+
+4) TEST ON THE SAME MOBILE VIEWPORT (375px) AFTER FIXING
+   - Confirm every card in "Shop by Category" is the same height as its row 
+     neighbors, every card in "Deals of the Day" and "All Products" is the 
+     same height as its row neighbors, and no card has a blank/broken visual 
+     that stands out from the rest.
+
+Show me which products/categories had missing or broken image URLs in the 
+database before applying the fallback-design fix.

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Config Checker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #7C8BF2;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .status {
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .var-list {
+      list-style: none;
+      padding: 0;
+    }
+    .var-item {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .var-item.ok {
+      background: #d4edda;
+      color: #155724;
+    }
+    .var-item.missing {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .icon {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+    .var-name {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .var-value {
+      color: #666;
+      font-size: 12px;
+    }
+    .instructions {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #856404;
+    }
+    .instructions ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin: 5px 0;
+    }
+    button {
+      background: #7C8BF2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #5A6BE0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Firebase Config Checker</h1>
+    <p class="subtitle">Diagnostic tool to check if Firebase environment variables are properly loaded</p>
+    
+    <div id="status" class="status"></div>
+    
+    <h3>Environment Variables:</h3>
+    <ul id="varList" class="var-list"></ul>
+    
+    <button onclick="copyReport()">📋 Copy Report</button>
+    
+    <div id="instructions" class="instructions" style="display: none;">
+      <h3>⚠️ Fix Required</h3>
+      <p>Some Firebase environment variables are missing. Follow these steps:</p>
+      <ol>
+        <li>Go to <strong>Vercel Dashboard</strong> → Your Project → <strong>Settings</strong></li>
+        <li>Click <strong>Environment Variables</strong></li>
+        <li>Add each missing variable shown above with the correct value</li>
+        <li>Set Environment to <strong>Production</strong></li>
+        <li><strong>IMPORTANT:</strong> Redeploy your project after adding variables</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const REQUIRED_VARS = [
+      'VITE_FIREBASE_API_KEY',
+      'VITE_FIREBASE_AUTH_DOMAIN',
+      'VITE_FIREBASE_PROJECT_ID',
+      'VITE_FIREBASE_STORAGE_BUCKET',
+      'VITE_FIREBASE_MESSAGING_SENDER_ID',
+      'VITE_FIREBASE_APP_ID'
+    ];
+
+    function checkConfig() {
+      const results = [];
+      let allPresent = true;
+
+      REQUIRED_VARS.forEach(varName => {
+        // In Vite, env vars are exposed via import.meta.env
+        const value = import.meta?.env?.[varName];
+        const isPresent = value && value !== 'undefined';
+        
+        results.push({
+          name: varName,
+          present: isPresent,
+          value: isPresent ? value : 'MISSING'
+        });
+
+        if (!isPresent) {
+          allPresent = false;
+        }
+      });
+
+      return { allPresent, results };
+    }
+
+    function displayResults() {
+      const { allPresent, results } = checkConfig();
+      const statusEl = document.getElementById('status');
+      const varListEl = document.getElementById('varList');
+      const instructionsEl = document.getElementById('instructions');
+
+      // Display status
+      if (allPresent) {
+        statusEl.className = 'status success';
+        statusEl.innerHTML = '✅ All Firebase environment variables are properly configured!';
+        instructionsEl.style.display = 'none';
+      } else {
+        statusEl.className = 'status error';
+        statusEl.innerHTML = '❌ Some Firebase environment variables are missing!';
+        instructionsEl.style.display = 'block';
+      }
+
+      // Display variable list
+      varListEl.innerHTML = '';
+      results.forEach(result => {
+        const li = document.createElement('li');
+        li.className = result.present ? 'var-item ok' : 'var-item missing';
+        
+        const icon = result.present ? '✅' : '❌';
+        const truncatedValue = result.present 
+          ? (result.value.length > 30 ? result.value.substring(0, 30) + '...' : result.value)
+          : 'MISSING';
+        
+        li.innerHTML = `
+          <span class="icon">${icon}</span>
+          <span class="var-name">${result.name}:</span>
+          <span class="var-value">${truncatedValue}</span>
+        `;
+        
+        varListEl.appendChild(li);
+      });
+
+      // Log to console as well
+      console.log('Firebase Config Check Results:');
+      console.table(results);
+    }
+
+    function copyReport() {
+      const { allPresent, results } = checkConfig();
+      
+      let report = 'Firebase Config Check Report\n';
+      report += '================================\n\n';
+      report += `Status: ${allPresent ? 'ALL OK ✅' : 'MISSING VARS ❌'}\n\n`;
+      report += 'Variables:\n';
+      
+      results.forEach(result => {
+        report += `${result.present ? '✅' : '❌'} ${result.name}: ${result.present ? 'Present' : 'MISSING'}\n`;
+      });
+      
+      report += '\n================================\n';
+      report += `Checked at: ${new Date().toISOString()}\n`;
+      report += `URL: ${window.location.href}\n`;
+
+      navigator.clipboard.writeText(report).then(() => {
+        alert('Report copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy report. Check console for details.');
+      });
+    }
+
+    // Run check on page load
+    displayResults();
+  </script>
+</body>
+</html>
