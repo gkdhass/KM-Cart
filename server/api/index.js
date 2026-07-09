@@ -97,32 +97,26 @@ app.use(express.urlencoded({ extended: true }));
 // Vercel serverless functions are stateless, but the runtime may reuse
 // the same container across invocations ("warm starts"). We cache the
 // connection to avoid reconnecting on every single request.
+//
+// PERFORMANCE TARGET: Warm invocations should respond in <500ms, not 3+ seconds
 
 let cachedConnection = null;
-let isConnecting = false; // Prevents race condition on concurrent requests
+let connectionPromise = null; // Cache the connection promise itself
 
 const connectDB = async () => {
-  // 1. Return early if already connected
+  // 1. Fast path: Return immediately if already connected
+  // readyState: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
   if (cachedConnection && mongoose.connection.readyState === 1) {
-    console.log('[DB] ✅ Using cached MongoDB connection');
+    console.log('[DB] ⚡ Using cached connection (fast path)');
     return cachedConnection;
   }
 
-  // 2. If another request is currently connecting, wait for it
-  if (isConnecting) {
-    console.log('[DB] ⏳ Waiting for in-progress connection...');
-    // Wait for the connection to complete (max 15 seconds)
-    const maxWaitTime = 15000;
-    const startTime = Date.now();
-    while (isConnecting && Date.now() - startTime < maxWaitTime) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      if (mongoose.connection.readyState === 1) {
-        console.log('[DB] ✅ In-progress connection completed');
-        return mongoose.connection;
-      }
-    }
-    // If still connecting after timeout, proceed with new connection attempt
-    console.warn('[DB] ⚠️ Connection wait timeout, attempting new connection');
+  // 2. If a connection is already in progress, wait for that same promise
+  // This prevents race conditions where multiple concurrent requests
+  // all try to create new connections simultaneously
+  if (connectionPromise) {
+    console.log('[DB] ⏳ Reusing in-progress connection promise...');
+    return connectionPromise;
   }
 
   // 3. Verify the env var exists before attempting connection
@@ -133,52 +127,81 @@ const connectDB = async () => {
     );
   }
 
-  try {
-    isConnecting = true;
-    console.log('[DB] 🔄 Establishing new MongoDB connection...');
+  // 4. Create NEW connection (only happens on cold start or after disconnect)
+  console.log('[DB] 🔄 Cold start - Establishing new MongoDB connection...');
+  const startTime = Date.now();
 
-    // Mongoose connection options optimized for serverless
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // CRITICAL: Don't buffer commands during connection
-      bufferCommands: false,
-      
-      // Connection pool settings (smaller for serverless)
-      maxPoolSize: 10,
-      minPoolSize: 1,
-      
-      // Timeout settings for serverless (faster failures)
-      serverSelectionTimeoutMS: 10000, // 10 seconds
-      socketTimeoutMS: 45000,
-      
-      // Connection management
-      connectTimeoutMS: 10000,
-      heartbeatFrequencyMS: 10000,
-      
-      // Automatically retry initial connection
-      retryWrites: true,
-      retryReads: true,
-    });
+  // Store the connection promise so concurrent requests can await the same promise
+  connectionPromise = (async () => {
+    try {
+      // Mongoose connection options optimized for serverless
+      const conn = await mongoose.connect(process.env.MONGODB_URI, {
+        // CRITICAL: Don't buffer commands during connection
+        bufferCommands: false,
+        
+        // Connection pool settings (optimized for serverless)
+        maxPoolSize: 5,        // Reduced from 10 (serverless functions are ephemeral)
+        minPoolSize: 1,
+        
+        // Aggressive timeout settings for serverless (fail fast)
+        serverSelectionTimeoutMS: 5000,  // Reduced from 10s (fail faster)
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 5000,          // Reduced from 10s
+        
+        // Keep connection alive across warm invocations
+        heartbeatFrequencyMS: 10000,
+        
+        // Automatically retry operations
+        retryWrites: true,
+        retryReads: true,
+      });
 
-    // Wait for connection to fully establish before accessing properties
-    await mongoose.connection.asPromise();
+      // Wait for connection to fully establish before accessing properties
+      await mongoose.connection.asPromise();
 
-    cachedConnection = conn;
-    isConnecting = false;
+      const elapsed = Date.now() - startTime;
 
-    // Access connection properties AFTER connection is fully established
-    const host = mongoose.connection.host || 'unknown';
-    const dbName = mongoose.connection.name || mongoose.connection.db?.databaseName || 'unknown';
-    
-    console.log(`[DB] ✅ MongoDB Connected: ${host}`);
-    console.log(`[DB] 📦 Database: ${dbName}`);
-    
-    return conn;
-  } catch (error) {
-    console.error('[DB ERROR] ❌ MongoDB Connection Failed:', error.message);
-    cachedConnection = null;
-    isConnecting = false;
-    throw error;
-  }
+      // Access connection properties AFTER connection is fully established
+      const host = mongoose.connection.host || 'unknown';
+      const dbName = mongoose.connection.name || mongoose.connection.db?.databaseName || 'unknown';
+      
+      console.log(`[DB] ✅ MongoDB Connected: ${host} (${elapsed}ms)`);
+      console.log(`[DB] 📦 Database: ${dbName}`);
+      
+      cachedConnection = conn;
+      return conn;
+      
+    } catch (error) {
+      console.error('[DB ERROR] ❌ Connection failed:', error.message);
+      
+      // Clear both cache and promise on error so next request can retry
+      cachedConnection = null;
+      connectionPromise = null;
+      
+      throw error;
+    }
+  })();
+
+  return connectionPromise;
+};
+      console.log(`[DB] ✅ MongoDB Connected: ${host} (${elapsed}ms)`);
+      console.log(`[DB] 📦 Database: ${dbName}`);
+      
+      cachedConnection = conn;
+      return conn;
+      
+    } catch (error) {
+      console.error('[DB ERROR] ❌ Connection failed:', error.message);
+      
+      // Clear both cache and promise on error so next request can retry
+      cachedConnection = null;
+      connectionPromise = null;
+      
+      throw error;
+    }
+  })();
+
+  return connectionPromise;
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -294,9 +317,12 @@ app.use((err, req, res, next) => {
 // We connect to MongoDB first (cached), then delegate to Express.
 
 module.exports = async (req, res) => {
+  const requestStartTime = Date.now();
+  
   try {
     // Set serverless-specific headers
     res.setHeader('X-Powered-By', 'Vercel');
+    res.setHeader('X-Function-Region', process.env.VERCEL_REGION || 'unknown');
     
     // Skip DB connection for basic health checks and root endpoint
     const skipDBRoutes = ['/', '/api', '/api/health'];
@@ -305,13 +331,28 @@ module.exports = async (req, res) => {
     // Skip DB connection for OPTIONS preflight
     const isPreflight = req.method === 'OPTIONS';
 
-    // Connect to MongoDB for all other requests
+    // Connect to MongoDB for all other requests (connection is cached)
     if (!isHealthCheck && !isPreflight) {
+      const dbStartTime = Date.now();
       await connectDB();
+      const dbElapsed = Date.now() - dbStartTime;
+      
+      // Log slow DB connections (should be <100ms for cached connections)
+      if (dbElapsed > 100) {
+        console.warn(`[PERF] ⚠️ DB connection took ${dbElapsed}ms (expected <100ms for warm)`);
+      }
     }
     
     // Delegate request to Express app
-    return app(req, res);
+    const result = app(req, res);
+    
+    // Log total request time
+    const totalElapsed = Date.now() - requestStartTime;
+    if (totalElapsed > 1000) {
+      console.warn(`[PERF] ⚠️ Total request time: ${totalElapsed}ms (route: ${req.method} ${req.url})`);
+    }
+    
+    return result;
     
   } catch (error) {
     console.error('❌ Serverless handler error:', error.message);
