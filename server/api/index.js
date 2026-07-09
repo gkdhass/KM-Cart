@@ -99,15 +99,33 @@ app.use(express.urlencoded({ extended: true }));
 // connection to avoid reconnecting on every single request.
 
 let cachedConnection = null;
+let isConnecting = false; // Prevents race condition on concurrent requests
 
 const connectDB = async () => {
-  // Return early if already connected
+  // 1. Return early if already connected
   if (cachedConnection && mongoose.connection.readyState === 1) {
-    console.log('[DB] Using cached MongoDB connection');
+    console.log('[DB] ✅ Using cached MongoDB connection');
     return cachedConnection;
   }
 
-  // Verify the env var exists before attempting connection
+  // 2. If another request is currently connecting, wait for it
+  if (isConnecting) {
+    console.log('[DB] ⏳ Waiting for in-progress connection...');
+    // Wait for the connection to complete (max 15 seconds)
+    const maxWaitTime = 15000;
+    const startTime = Date.now();
+    while (isConnecting && Date.now() - startTime < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (mongoose.connection.readyState === 1) {
+        console.log('[DB] ✅ In-progress connection completed');
+        return mongoose.connection;
+      }
+    }
+    // If still connecting after timeout, proceed with new connection attempt
+    console.warn('[DB] ⚠️ Connection wait timeout, attempting new connection');
+  }
+
+  // 3. Verify the env var exists before attempting connection
   if (!process.env.MONGODB_URI) {
     throw new Error(
       'MONGODB_URI environment variable is not set. ' +
@@ -116,6 +134,9 @@ const connectDB = async () => {
   }
 
   try {
+    isConnecting = true;
+    console.log('[DB] 🔄 Establishing new MongoDB connection...');
+
     // Mongoose connection options optimized for serverless
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       // CRITICAL: Don't buffer commands during connection
@@ -138,14 +159,24 @@ const connectDB = async () => {
       retryReads: true,
     });
 
+    // Wait for connection to fully establish before accessing properties
+    await mongoose.connection.asPromise();
+
     cachedConnection = conn;
-    console.log('[DB] MongoDB Connected:', conn.connection.host);
-    console.log('[DB] Database:', conn.connection.name);
+    isConnecting = false;
+
+    // Access connection properties AFTER connection is fully established
+    const host = mongoose.connection.host || 'unknown';
+    const dbName = mongoose.connection.name || mongoose.connection.db?.databaseName || 'unknown';
+    
+    console.log(`[DB] ✅ MongoDB Connected: ${host}`);
+    console.log(`[DB] 📦 Database: ${dbName}`);
     
     return conn;
   } catch (error) {
-    console.error('[DB ERROR] MongoDB Connection Failed:', error.message);
+    console.error('[DB ERROR] ❌ MongoDB Connection Failed:', error.message);
     cachedConnection = null;
+    isConnecting = false;
     throw error;
   }
 };

@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 
 /** Cache the connection promise to avoid duplicate connections */
 let cachedConnection = null;
+let isConnecting = false; // Prevents race condition on concurrent requests
 
 /**
  * Connects to MongoDB database.
@@ -18,6 +19,7 @@ let cachedConnection = null;
  *
  * Features:
  * - Connection caching (reuses existing connection)
+ * - Race condition protection (prevents multiple simultaneous connections)
  * - Configurable timeouts for cloud environments
  * - No process.exit() — lets the caller handle failures
  *
@@ -25,12 +27,28 @@ let cachedConnection = null;
  * @throws {Error} If connection fails (caller should handle)
  */
 const connectDB = async () => {
-  // Return cached connection if already connected
+  // 1. Return cached connection if already connected
   if (cachedConnection && mongoose.connection.readyState === 1) {
+    console.log('✅ Using cached MongoDB connection');
     return cachedConnection;
   }
 
-  // Validate env var before attempting connection
+  // 2. If another request is currently connecting, wait for it
+  if (isConnecting) {
+    console.log('⏳ Waiting for in-progress connection...');
+    const maxWaitTime = 15000;
+    const startTime = Date.now();
+    while (isConnecting && Date.now() - startTime < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (mongoose.connection.readyState === 1) {
+        console.log('✅ In-progress connection completed');
+        return mongoose.connection;
+      }
+    }
+    console.warn('⚠️ Connection wait timeout, attempting new connection');
+  }
+
+  // 3. Validate env var before attempting connection
   if (!process.env.MONGODB_URI) {
     throw new Error(
       'MONGODB_URI environment variable is not set. ' +
@@ -39,6 +57,9 @@ const connectDB = async () => {
   }
 
   try {
+    isConnecting = true;
+    console.log('🔄 Establishing new MongoDB connection...');
+
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       // Performance: buffer commands while connecting (wait for connection)
       bufferCommands: true,
@@ -52,10 +73,18 @@ const connectDB = async () => {
       heartbeatFrequencyMS: 30000,
     });
 
-    cachedConnection = conn;
+    // Wait for connection to fully establish before accessing properties
+    await mongoose.connection.asPromise();
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📦 Database: ${conn.connection.name}`);
+    cachedConnection = conn;
+    isConnecting = false;
+
+    // Access connection properties AFTER connection is fully established
+    const host = mongoose.connection.host || 'unknown';
+    const dbName = mongoose.connection.name || mongoose.connection.db?.databaseName || 'unknown';
+
+    console.log(`✅ MongoDB Connected: ${host}`);
+    console.log(`📦 Database: ${dbName}`);
 
     // Handle connection events
     mongoose.connection.on('error', (err) => {
@@ -65,6 +94,7 @@ const connectDB = async () => {
     mongoose.connection.on('disconnected', () => {
       console.warn('⚠️ MongoDB disconnected. Mongoose will auto-reconnect.');
       cachedConnection = null;
+      isConnecting = false;
     });
 
     mongoose.connection.on('reconnected', () => {
@@ -75,6 +105,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error(`❌ MongoDB Connection Failed: ${error.message}`);
     cachedConnection = null;
+    isConnecting = false;
     // DO NOT call process.exit() — let the caller handle the error
     // In serverless: the request will get a 500 response
     // In Render: the server will retry on next request
